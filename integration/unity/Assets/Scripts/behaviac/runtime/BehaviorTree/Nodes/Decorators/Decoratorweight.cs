@@ -11,49 +11,40 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace behaviac
 {
     public class DecoratorWeight : DecoratorNode
     {
-        public DecoratorWeight()
-        {
-		}
-
-        ~DecoratorWeight()
-        {
-            m_weight_var = null;
-        }
-
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
 
-            foreach (property_t p in properties)
+            for (int i = 0; i < properties.Count; ++i)
             {
+                property_t p = properties[i];
                 if (p.name == "Weight")
                 {
-                    string typeName = null;
-                    string propertyName = null;
-                    this.m_weight_var = Condition.LoadRight(p.value, propertyName, ref typeName);
+                    this.m_weight = AgentMeta.ParseProperty(p.value);
                 }
             }
         }
 
         protected virtual int GetWeight(behaviac.Agent pAgent)
         {
-            if (this.m_weight_var != null)
+            if (this.m_weight != null)
             {
-                Debug.Check(this.m_weight_var != null);
-                int count = (int)this.m_weight_var.GetValue(pAgent);
-
-                return count;
+                Debug.Check(this.m_weight is CInstanceMember<int>);
+                return ((CInstanceMember<int>)this.m_weight).GetValue(pAgent);
             }
 
             return 0;
+        }
+
+        public override bool IsManagingChildrenAsSubTrees()
+        {
+            return false;
         }
 
         protected override BehaviorTask createTask()
@@ -63,14 +54,10 @@ namespace behaviac
             return pTask;
         }
 
-        Property m_weight_var;
+        protected IInstanceMember m_weight;
 
         public class DecoratorWeightTask : DecoratorTask
         {
-            public DecoratorWeightTask() : base()
-            {
-            }
-
             public int GetWeight(Agent pAgent)
             {
                 Debug.Check(this.GetNode() is DecoratorWeight);

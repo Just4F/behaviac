@@ -11,8 +11,8 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _ENGINESERVICES_GROUPMEMBER_H_
-#define _ENGINESERVICES_GROUPMEMBER_H_
+#ifndef BEHAVIAC_ENGINESERVICES_GROUPMEMBER_H
+#define BEHAVIAC_ENGINESERVICES_GROUPMEMBER_H
 
 #include "behaviac/base/object/tagobject.h"
 
@@ -25,45 +25,46 @@
 
 #define BEGIN_GROUP_MEMBER(groupName, propertyFlags) \
     { \
-	typedef CGroupMember<CreateChildNode, propertyFlags> MemberType; \
-	MemberType* property_ = BEHAVIAC_NEW MemberType(groupName, objectType::GetClassTypeName()); \
-        CTagObjectDescriptor::PushBackMember(ms_members, property_); \
+        typedef CGroupMember<CreateChildNode, propertyFlags> MemberType; \
+        MemberType* property_ = BEHAVIAC_NEW MemberType(groupName, objectType::GetClassTypeName()); \
+        behaviac::CTagObjectDescriptor::PushBackMember(ms_members, property_); \
         { \
-            CTagObject::MembersContainer& ms_members = property_->GetMembers();
+            ms_members = property_->GetMembers();
 
 #define END_GROUP_MEMBER() \
     } \
     }
 
 template <bool ChildNodeCreate, uint32_t PropertyFlags>
-class CGroupMember : public CMemberBase
+class CGroupMember : public behaviac::CMemberBase
 {
 public:
     BEHAVIAC_DECLARE_MEMORY_OPERATORS(CGroupMember);
 
     CGroupMember(const char* groupName, const char* className)
-        : CMemberBase(groupName, className)
+        : behaviac::CMemberBase(groupName, className)
     {}
 
-	CGroupMember(const CGroupMember& copy) : CMemberBase(copy), ms_members(copy.ms_members)
-	{}
+    CGroupMember(const CGroupMember& copy) : behaviac::CMemberBase(copy), ms_members(copy.ms_members)
+    {}
 
-	virtual CMemberBase* clone() const
-	{
-		CMemberBase* p = BEHAVIAC_NEW CGroupMember(*this);
-
-		return p;
-	}
-
-    virtual void Load(CTagObject* parent, const ISerializableNode* node)
+    virtual behaviac::CMemberBase* clone() const
     {
-        if (PropertyFlags & EPersistenceType_Description_Load)
+        behaviac::CMemberBase* p = BEHAVIAC_NEW CGroupMember(*this);
+
+        return p;
+    }
+
+    virtual void Load(behaviac::CTagObject* parent, const behaviac::ISerializableNode* node)
+    {
+        if (PropertyFlags & behaviac::EPersistenceType_Description_Load)
         {
-            const ISerializableNode* groupNode;
+            const behaviac::ISerializableNode* groupNode;
 
             if (ChildNodeCreate)
             {
                 groupNode = node->findChild(m_propertyID);
+
             }
             else
             {
@@ -72,53 +73,55 @@ public:
 
             if (groupNode)
             {
-                CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
-                CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
+                behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
+                behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
 
                 for (; it != itEnd; ++it)
                 {
-					CMemberBase* m = *it;
+                    behaviac::CMemberBase* m = *it;
                     m->Load(parent, groupNode);
                 }
             }
         }
     }
 
-    virtual void Save(const CTagObject* parent, ISerializableNode* node)
+    virtual void Save(const behaviac::CTagObject* parent, behaviac::ISerializableNode* node)
     {
-        if (PropertyFlags & EPersistenceType_Description_Save)
+        if (PropertyFlags & behaviac::EPersistenceType_Description_Save)
         {
-            ISerializableNode* groupNode;
+            behaviac::ISerializableNode* groupNode;
 
             if (ChildNodeCreate)
             {
                 groupNode = node->newChild(m_propertyID);
+
             }
             else
             {
                 groupNode = node;
             }
 
-            CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
-            CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
+            behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
+            behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
 
             for (; it != itEnd; ++it)
             {
-				CMemberBase* m = *it;
+                behaviac::CMemberBase* m = *it;
                 m->Save(parent, groupNode);
             }
         }
     }
 
-    virtual void LoadState(CTagObject* parent, const ISerializableNode* node)
+    virtual void LoadState(behaviac::CTagObject* parent, const behaviac::ISerializableNode* node)
     {
-        if (PropertyFlags & EPersistenceType_State_Load)
+        if (PropertyFlags & behaviac::EPersistenceType_State_Load)
         {
-            const ISerializableNode* groupNode;
+            const behaviac::ISerializableNode* groupNode;
 
             if (ChildNodeCreate)
             {
                 groupNode = node->findChild(m_propertyID);
+
             }
             else
             {
@@ -127,76 +130,79 @@ public:
 
             if (groupNode)
             {
-                CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
-                CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
+                behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
+                behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
 
                 for (; it != itEnd; ++it)
                 {
-					CMemberBase* m = *it;
+                    behaviac::CMemberBase* m = *it;
                     m->LoadState(parent, groupNode);
                 }
             }
         }
     }
 
-    virtual void SaveState(const CTagObject* parent, ISerializableNode* node)
+    virtual void SaveState(const behaviac::CTagObject* parent, behaviac::ISerializableNode* node)
     {
-        if (PropertyFlags & EPersistenceType_State_Save)
+        if (PropertyFlags & behaviac::EPersistenceType_State_Save)
         {
-            ISerializableNode* groupNode;
+            behaviac::ISerializableNode* groupNode;
 
             if (ChildNodeCreate)
             {
                 groupNode = node->newChild(m_propertyID);
+
             }
             else
             {
                 groupNode = node;
             }
 
-            CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
-            CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
+            behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
+            behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
 
             for (; it != itEnd; ++it)
             {
-				CMemberBase* m = *it;
+                behaviac::CMemberBase* m = *it;
                 m->SaveState(parent, groupNode);
             }
         }
     }
 
-    virtual void GetUiInfo(CTagTypeDescriptor::TypesMap_t* types, const CTagObject* parent, const XmlNodeRef& xmlNode)
+    virtual void GetUiInfo(behaviac::CTagTypeDescriptor::TypesMap_t* types, const behaviac::CTagObject* parent, const behaviac::XmlNodeRef& xmlNode)
     {
-        if (PropertyFlags & EPersistenceType_UiInfo)
+        if (PropertyFlags & behaviac::EPersistenceType_UiInfo)
         {
-            XmlNodeRef groupNode = xmlNode;
+            behaviac::XmlNodeRef groupNode = xmlNode;
 
             if (ChildNodeCreate && types == NULL)
             {
                 groupNode = xmlNode->newChild("Member");
                 groupNode->setAttr("Name", m_propertyID.GetString());
-				if (this->m_classFullName)
-				{
-					groupNode->setAttr("Class", this->m_classFullName);
-				}
-				if (m_bStatic)
-				{
-					groupNode->setAttr("Static", "true");
-				}
+
+                if (this->m_classFullName)
+                {
+                    groupNode->setAttr("Class", this->m_classFullName);
+                }
+
+                if (m_bStatic)
+                {
+                    groupNode->setAttr("Static", "true");
+                }
             }
 
-            CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
-            CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
+            behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator it = ms_members.membersVector.begin();
+            behaviac::CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = ms_members.membersVector.end();
 
             for (; it != itEnd; ++it)
             {
-				CMemberBase* m = *it;
+                behaviac::CMemberBase* m = *it;
                 m->GetUiInfo(types, parent, groupNode);
             }
         }
     }
 
-    virtual void GetMethodsDescription(CTagTypeDescriptor::TypesMap_t* types, const CTagObject* parent, const XmlNodeRef& xmlNode)
+    virtual void GetMethodsDescription(behaviac::CTagTypeDescriptor::TypesMap_t* types, const behaviac::CTagObject* parent, const behaviac::XmlNodeRef& xmlNode)
     {
         BEHAVIAC_UNUSED_VAR(parent);
         BEHAVIAC_UNUSED_VAR(xmlNode);
@@ -205,15 +211,14 @@ public:
         BEHAVIAC_ASSERT(false, "Not implemented");
     }
 
-    CTagObject::MembersContainer& GetMembers()
+    behaviac::CTagObject::MembersContainer& GetMembers()
     {
         return ms_members;
     }
 
 private:
-    CTagObject::MembersContainer ms_members;
+    behaviac::CTagObject::MembersContainer ms_members;
 };
-
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////            CONDITIONAL GROUP MEMBER            ////////////////
@@ -223,11 +228,11 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 #define BEGIN_CONDITIONAL_GROUP_MEMBER(groupName, conditionalName, propertyFlags, createChildNode) \
     { \
-		typedef CConditionalGroupMember<objectType, createChildNode, propertyFlags> MemberType; \
+        typedef CConditionalGroupMember<objectType, createChildNode, propertyFlags> MemberType; \
         MemberType* property_ = BEHAVIAC_NEW MemberType(groupName, &objectType::conditionalName); \
-        CTagObjectDescriptor::PushBackMember(ms_members, property_); \
+        behaviac::CTagObjectDescriptor::PushBackMember(ms_members, property_); \
         { \
-            CTagObject::MembersContainer& ms_members = property_->GetMembers();
+            behaviac::CTagObject::MembersContainer& ms_members = property_->GetMembers();
 
 template <class ObjectType, bool ChildNodeCreate, uint32_t PropertyFlags>
 class CConditionalGroupMember : public CGroupMember<ChildNodeCreate, PropertyFlags>
@@ -239,41 +244,41 @@ public:
         : CGroupMember<ChildNodeCreate, PropertyFlags>(groupName), m_condition(condition)
     {}
 
-    virtual void Load(CTagObject* parent, const ISerializableNode* node)
+    virtual void Load(behaviac::CTagObject* parent, const behaviac::ISerializableNode* node)
     {
-        if ((PropertyFlags & EPersistenceType_Description_Load) && (((ObjectType*)parent)->*m_condition)())
+        if ((PropertyFlags & behaviac::EPersistenceType_Description_Load) && (((ObjectType*)parent)->*m_condition)())
         {
             CGroupMember<ChildNodeCreate, PropertyFlags>::Load(parent, node);
         }
     }
 
-    virtual void Save(const CTagObject* parent, ISerializableNode* node)
+    virtual void Save(const behaviac::CTagObject* parent, behaviac::ISerializableNode* node)
     {
-        if ((PropertyFlags & EPersistenceType_Description_Save) && (((ObjectType*)parent)->*m_condition)())
+        if ((PropertyFlags & behaviac::EPersistenceType_Description_Save) && (((ObjectType*)parent)->*m_condition)())
         {
             CGroupMember<ChildNodeCreate, PropertyFlags>::Save(parent, node);
         }
     }
 
-    virtual void LoadState(CTagObject* parent, const ISerializableNode* node)
+    virtual void LoadState(behaviac::CTagObject* parent, const behaviac::ISerializableNode* node)
     {
-        if ((PropertyFlags & EPersistenceType_State_Load) && (((ObjectType*)parent)->*m_condition)())
+        if ((PropertyFlags & behaviac::EPersistenceType_State_Load) && (((ObjectType*)parent)->*m_condition)())
         {
             CGroupMember<ChildNodeCreate, PropertyFlags>::LoadState(parent, node);
         }
     }
 
-    virtual void SaveState(const CTagObject* parent, ISerializableNode* node)
+    virtual void SaveState(const behaviac::CTagObject* parent, behaviac::ISerializableNode* node)
     {
-        if ((PropertyFlags & EPersistenceType_State_Save) && (((ObjectType*)parent)->*m_condition)())
+        if ((PropertyFlags & behaviac::EPersistenceType_State_Save) && (((ObjectType*)parent)->*m_condition)())
         {
             CGroupMember<ChildNodeCreate, PropertyFlags>::SaveState(parent, node);
         }
     }
 
-    virtual void GetUiInfo(CTagTypeDescriptor::TypesMap_t* types, const CTagObject* parent, const XmlNodeRef& xmlNode)
+    virtual void GetUiInfo(behaviac::CTagTypeDescriptor::TypesMap_t* types, const behaviac::CTagObject* parent, const behaviac::XmlNodeRef& xmlNode)
     {
-        if ((PropertyFlags & EPersistenceType_UiInfo) && (((ObjectType*)parent)->*m_condition)())
+        if ((PropertyFlags & behaviac::EPersistenceType_UiInfo) && (((ObjectType*)parent)->*m_condition)())
         {
             CGroupMember<ChildNodeCreate, PropertyFlags>::GetUiInfo(types, parent, xmlNode);
         }
@@ -283,4 +288,4 @@ private:
     bool (ObjectType::*m_condition)(void) const;
 };
 
-#endif // #ifndef _ENGINESERVICES_GROUPMEMBER_H_
+#endif // #ifndef BEHAVIAC_ENGINESERVICES_GROUPMEMBER_H

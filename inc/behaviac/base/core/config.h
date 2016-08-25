@@ -11,63 +11,93 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifndef BEHAVIAC_BASE_CORE_CONFIG_H_
-#define BEHAVIAC_BASE_CORE_CONFIG_H_
+#ifndef BEHAVIAC_BASE_CORE_CONFIG_H
+#define BEHAVIAC_BASE_CORE_CONFIG_H
 
+/**
+BEHAVIAC_RELEASE	0	// development mode
+BEHAVIAC_RELEASE	1	// release/retail mode
+
+BEHAVIAC_RELEASE MUST be defined the same in lib(behaviac) and app(your game).
+
+Please don't define BEHAVIAC_RELEASE unless you know what you are doing.
+*/
+#include "behaviac/base/core/_config.h"
 #include "behaviac/base/core/staticassert.h"
 #include "behaviac/base/core/compiler.h"
+//#include "behaviac/base/core/types.h"
 
-#include "behaviac/base/core/types.h"
-
-#if defined(_MSC_VER) && _MSC_VER < 1600 /* MSVC2010 */
-#include "msc_stdint.h"
+//if BEHAVIAC_RELEASE is not defined in _config.h, BEHAVIAC_RELEASE will be defined
+// as 0 for Debug and 1 for Release
+//if BEHAVIAC_RELEASE is defined in _config.h, then, it will be used and will not be defined in the following.
+#if (defined(_DEBUG) || defined(DEBUG))
+	#ifndef BEHAVIAC_RELEASE
+		#define BEHAVIAC_RELEASE				0
+	#endif
 #else
-#include <stdint.h>
+	#ifndef BEHAVIAC_RELEASE
+		#define BEHAVIAC_RELEASE				1
+	#endif
+#endif//
+
+#if _MSC_VER
+	#define BEHAVIAC_STRING_CONTAT(A, B)	BEHAVIAC_JOIN_TOKENS(A, B)
+#else
+	#define BEHAVIAC_STRING_CONTAT(A, B)	A B
 #endif
 
+#if BEHAVIAC_COMPILER_64BITS
+	#define _BEHAVIAC_BUILD_BITS_STR_ "_64"
+#else
+	#define _BEHAVIAC_BUILD_BITS_STR_ "_32"
+#endif
 
-#if BEHAVIAC_COMPILER_MSVC
-	//warning C4275: non dll-interface class 'stdext::exception' used as base for dll-interface class 'std::bad_cast'
-	#pragma warning(disable : 4275)
+#define _BEHAVIAC_VERSION_STRING_ BEHAVIAC_STRING_CONTAT("_", BEHAVIAC_VERSION_STRING)
+//ex: vs2013_3.4.3
+#define _BEHAVIAC_TEMP_COMPILER_VERSION_STR_ BEHAVIAC_STRING_CONTAT(BEHAVIAC_COMPILER_NAME, _BEHAVIAC_VERSION_STRING_)
+//ex: vs2013_3.4.3_32
+#define _BEHAVIAC_TEMP_BITS_COMPILER_VERSION_STR_ BEHAVIAC_STRING_CONTAT(_BEHAVIAC_TEMP_COMPILER_VERSION_STR_, _BEHAVIAC_BUILD_BITS_STR_)
+//ex: behaviac_vs2013_3.4.3_32
+#define _BEHAVIAC_COMPILER_VERSION_STR_ BEHAVIAC_STRING_CONTAT("behaviac_", _BEHAVIAC_TEMP_BITS_COMPILER_VERSION_STR_)
 
-	//warning C4530: C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc
-	#pragma warning(disable : 4530)
+#if (defined(_DEBUG) || defined(DEBUG))
+	#define _BEHAVIAC_BUILD_CONFIG_STR_ "_debug"
+#else
+	#define _BEHAVIAC_BUILD_CONFIG_STR_ "_ndebug"
+#endif//
 
-	//warning C4251: 'behaviac::VariableRegistry::m_proxyHolders' : class 'behaviac::vector<T>' needs to have dll-interface to be used
-	//by clients of class 'behaviac::VariableRegistry'
-	#pragma warning(disable : 4251)
+//ex: behaviac_vs2013_3.4.3_32_debug
+#define _BEHAVIAC_BUILD_INFO_STR_ BEHAVIAC_STRING_CONTAT(_BEHAVIAC_COMPILER_VERSION_STR_, _BEHAVIAC_BUILD_CONFIG_STR_)
 
-	//unreferenced formal parameter
-	#pragma warning(disable : 4100)
+//ex: behaviac_vs2013_3.4.3_32_debug_NRELEASE
+#if BEHAVIAC_RELEASE
+	#define BEHAVIAC_BUILD_CONFIG_STR BEHAVIAC_STRING_CONTAT(_BEHAVIAC_BUILD_INFO_STR_, "_RELEASE")
+#else
+	#define BEHAVIAC_BUILD_CONFIG_STR BEHAVIAC_STRING_CONTAT(_BEHAVIAC_BUILD_INFO_STR_, "_NRELEASE")
+#endif
 
-	#pragma warning(disable : 4505) // unreferenced local function has been removed
-	
-	#pragma warning(disable : 4127) // conditional expression is constant
-
-	//warning C4702: unreachable code
-	#pragma warning(disable : 4702)
-
-#endif//BEHAVIAC_COMPILER_MSVC
-
+#if !BEHAVIAC_RELEASE
+	#define BEHAVIAC_ENABLE_HOTRELOAD	1
+	#define BEHAVIAC_ENABLE_PROFILING	1
+#endif//BEHAVIAC_RELEASE
 
 //please don't use the following macros in the public header files unless you know what you are doing.
 //otherwise, it might be causing uncompatible layout for types
+#ifndef BEHAVIAC_ENABLE_NETWORKD
+	#define BEHAVIAC_ENABLE_NETWORKD	0
+#endif//BEHAVIAC_ENABLE_NETWORKD
 
-#define BEHAVIAC_ENABLE_LUA				0
-#define BEHAVIAC_ENABLE_NETWORKD		0
+#ifndef BEHAVIAC_ENABLE_LUA
+	#define BEHAVIAC_ENABLE_LUA			0
+#endif//BEHAVIAC_ENABLE_LUA
+
+#if _MSC_VER
+#if BEHAVIAC_ENABLE_LUA
+	#pragma warning(disable : 4244) //conversion from 'int' to 'char', possible loss of data
+	#pragma warning(disable : 4702) //unreachable code
+	#pragma warning(disable : 4310) //cast truncates constant value
+#endif
+#endif
 
 
-#if (defined(_DEBUG) || defined(DEBUG) || defined(BEHAVIAC_CFG_PROFILE))
-	//developement version
-#else
-	#ifndef BEHAVIAC_RELEASE
-		#define BEHAVIAC_RELEASE	1
-	#endif//BEHAVIAC_RELEASE
-#endif//
-
-#if !defined(BEHAVIAC_RELEASE)
-	#define BEHAVIAC_ENABLE_HOTRELOAD	1
-	#define BEHAVIAC_ENABLE_PROFILING	0
-#endif//BEHAVIAC_RELEASE
-
-#endif//BEHAVIAC_BASE_CORE_CONFIG_H_
+#endif//BEHAVIAC_BASE_CORE_CONFIG_H

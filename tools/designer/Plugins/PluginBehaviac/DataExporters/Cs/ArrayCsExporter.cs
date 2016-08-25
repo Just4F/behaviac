@@ -1,4 +1,4 @@
-﻿/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
 // Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
@@ -37,7 +37,7 @@ namespace PluginBehaviac.DataExporters
 
                         for (int i = 0; i < list.Count; ++i)
                         {
-                            string itemName = string.Format("{0}_item{1}", var, i);
+                            string itemName = string.Format("{0}_item{1}", var.Replace(".", "_"), i);
 
                             DataCsExporter.GenerateCode(list[i], stream, indent, itemTypename, itemName, string.Empty);
 

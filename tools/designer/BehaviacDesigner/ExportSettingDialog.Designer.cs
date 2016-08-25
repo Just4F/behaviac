@@ -13,41 +13,38 @@
 
 namespace Behaviac.Design
 {
-	partial class ExportSettingDialog
-	{
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.IContainer components = null;
+    partial class ExportSettingDialog
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
 
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing) {
+            if (disposing && (components != null)) {
+                components.Dispose();
+            }
 
-		#region Windows Form Designer generated code
+            base.Dispose(disposing);
+        }
 
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent()
-		{
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent() {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ExportSettingDialog));
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
             System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
-            this.folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
             this.okButton = new System.Windows.Forms.Button();
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.includedFilesGridView = new System.Windows.Forms.DataGridView();
@@ -59,15 +56,9 @@ namespace Behaviac.Design
             this.exportFolderTextBox = new System.Windows.Forms.TextBox();
             this.browseButton = new System.Windows.Forms.Button();
             this.exportFolderLabel = new System.Windows.Forms.Label();
-            this.exportFilenameLabel = new System.Windows.Forms.Label();
-            this.exportFilenameTextBox = new System.Windows.Forms.TextBox();
+            this.unifiedCheckBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.includedFilesGridView)).BeginInit();
             this.SuspendLayout();
-            // 
-            // folderBrowserDialog
-            // 
-            resources.ApplyResources(this.folderBrowserDialog, "folderBrowserDialog");
-            this.folderBrowserDialog.RootFolder = System.Environment.SpecialFolder.MyComputer;
             // 
             // okButton
             // 
@@ -89,10 +80,10 @@ namespace Behaviac.Design
             // 
             // includedFilesGridView
             // 
-            resources.ApplyResources(this.includedFilesGridView, "includedFilesGridView");
             this.includedFilesGridView.AllowUserToAddRows = false;
             this.includedFilesGridView.AllowUserToDeleteRows = false;
             this.includedFilesGridView.AllowUserToResizeRows = false;
+            resources.ApplyResources(this.includedFilesGridView, "includedFilesGridView");
             this.includedFilesGridView.BackgroundColor = System.Drawing.SystemColors.WindowFrame;
             this.includedFilesGridView.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
             dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
@@ -184,6 +175,7 @@ namespace Behaviac.Design
             this.exportFolderTextBox.ForeColor = System.Drawing.Color.LightGray;
             this.exportFolderTextBox.Name = "exportFolderTextBox";
             this.exportFolderTextBox.ReadOnly = true;
+            this.exportFolderTextBox.TextChanged += new System.EventHandler(this.exportFolderTextBox_TextChanged);
             // 
             // browseButton
             // 
@@ -199,19 +191,17 @@ namespace Behaviac.Design
             // 
             resources.ApplyResources(this.exportFolderLabel, "exportFolderLabel");
             this.exportFolderLabel.Name = "exportFolderLabel";
+            this.exportFolderLabel.Click += new System.EventHandler(this.exportFolderLabel_Click);
             // 
-            // exportFilenameLabel
+            // unifiedCheckBox
             // 
-            resources.ApplyResources(this.exportFilenameLabel, "exportFilenameLabel");
-            this.exportFilenameLabel.Name = "exportFilenameLabel";
-            // 
-            // exportFilenameTextBox
-            // 
-            resources.ApplyResources(this.exportFilenameTextBox, "exportFilenameTextBox");
-            this.exportFilenameTextBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.exportFilenameTextBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.exportFilenameTextBox.ForeColor = System.Drawing.Color.LightGray;
-            this.exportFilenameTextBox.Name = "exportFilenameTextBox";
+            resources.ApplyResources(this.unifiedCheckBox, "unifiedCheckBox");
+            this.unifiedCheckBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            this.unifiedCheckBox.Checked = true;
+            this.unifiedCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.unifiedCheckBox.ForeColor = System.Drawing.Color.LightGray;
+            this.unifiedCheckBox.Name = "unifiedCheckBox";
+            this.unifiedCheckBox.UseVisualStyleBackColor = false;
             // 
             // ExportSettingDialog
             // 
@@ -220,8 +210,7 @@ namespace Behaviac.Design
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
             this.CancelButton = this.cancelButton;
-            this.Controls.Add(this.exportFilenameLabel);
-            this.Controls.Add(this.exportFilenameTextBox);
+            this.Controls.Add(this.unifiedCheckBox);
             this.Controls.Add(this.exportFolderLabel);
             this.Controls.Add(this.browseButton);
             this.Controls.Add(this.exportFolderTextBox);
@@ -239,12 +228,11 @@ namespace Behaviac.Design
             this.ResumeLayout(false);
             this.PerformLayout();
 
-		}
+        }
 
-		#endregion
+        #endregion
 
-		private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog;
-		private System.Windows.Forms.Button okButton;
+        private System.Windows.Forms.Button okButton;
         private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.DataGridView includedFilesGridView;
         private System.Windows.Forms.Button removeFilenameButton;
@@ -255,7 +243,6 @@ namespace Behaviac.Design
         private System.Windows.Forms.TextBox exportFolderTextBox;
         private System.Windows.Forms.Button browseButton;
         private System.Windows.Forms.Label exportFolderLabel;
-        private System.Windows.Forms.Label exportFilenameLabel;
-        private System.Windows.Forms.TextBox exportFilenameTextBox;
-	}
+        private System.Windows.Forms.CheckBox unifiedCheckBox;
+    }
 }

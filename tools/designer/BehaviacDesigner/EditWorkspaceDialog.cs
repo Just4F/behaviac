@@ -33,54 +33,72 @@
 
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
 using System.IO;
+using System.Text;
+using System.Windows.Forms;
+using System.Xml;
+
 using Behaviac.Design.Properties;
 
 namespace Behaviac.Design
 {
-	/// <summary>
-	/// This class is the window which appears when creating or editing a workspace.
-	/// </summary>
-	internal partial class EditWorkspaceDialog : Form
-	{
-		internal EditWorkspaceDialog()
-		{
-			InitializeComponent();
+    /// <summary>
+    /// This class is the window which appears when creating or editing a workspace.
+    /// </summary>
+    internal partial class EditWorkspaceDialog : Form
+    {
+        internal EditWorkspaceDialog()
+        {
+            InitializeComponent();
+
+            if (string.IsNullOrEmpty(this.languageComboBox.Text))
+            {
+                this.languageComboBox.SelectedIndex = 0;
+            }
+
+            checkButtons();
         }
 
         private string _filename = string.Empty;
 
-		/// <summary>
-		/// The workspace which is currently edited or created.
-		/// </summary>
-		private Workspace _workspace = null;
+        /// <summary>
+        /// The workspace which is currently edited or created.
+        /// </summary>
+        private Workspace _workspace = null;
 
-		/// <summary>
-		/// The workspace created or edited by the dialogue.
-		/// </summary>
-		internal Workspace Workspace
-		{
-			get { return _workspace; }
-		}
+        /// <summary>
+        /// The workspace created or edited by the dialogue.
+        /// </summary>
+        internal Workspace Workspace
+        {
+            get { return _workspace; }
+        }
 
-		/// <summary>
-		/// Sets the workspace you want to edit.
-		/// </summary>
-		/// <param name="ws">The workspace which will be edited.</param>
-		internal void EditWorkspace(Workspace ws)
-		{
+        private string _sourceLanguage = "";
+
+        /// <summary>
+        /// Sets the workspace you want to edit.
+        /// </summary>
+        /// <param name="ws">The workspace which will be edited.</param>
+        internal void EditWorkspace(Workspace ws)
+        {
             _workspace = ws;
 
-			// Fill the form.
+            // Fill the form.
             this.nameTextBox.Text = ws.Name;
-            this.xmlFolderTextBox.Text = ws.XMLFolder;
-
-            this.locationTextBox.Text = Path.GetDirectoryName(ws.FileName);
+            this.languageComboBox.Text = ws.Language;
+            this.XMLTextBox.Text = ws.XMLFolder;
+            this.workspaceTextBox.Text = Path.GetDirectoryName(ws.FileName);
             this.sourceTextBox.Text = ws.Folder;
             this.exportTextBox.Text = ws.DefaultExportFolder;
+            this.typesExportTextBox.Text = ws.GetExportAbsoluteFolder(ws.Language);
 
-            this.locationTextBox.Enabled = false;
+            if (string.IsNullOrEmpty(this.languageComboBox.Text))
+            {
+                this.languageComboBox.SelectedIndex = 0;
+            }
+
+            this.workspaceTextBox.Enabled = false;
             this.workspaceButton.Enabled = false;
 
             this._filename = ws.FileName;
@@ -92,13 +110,16 @@ namespace Behaviac.Design
             {
                 DirectoryInfo dirInfo = new DirectoryInfo(Directory.GetCurrentDirectory());
                 string xmlFolder = ws.XMLFolder;
+
                 if (!Path.IsPathRooted(ws.XMLFolder))
                 {
                     xmlFolder = Path.GetFullPath(xmlFolder);
                 }
 
                 if (!Directory.Exists(ws.XMLFolder))
+                {
                     Directory.CreateDirectory(ws.XMLFolder);
+                }
 
                 string[] files = Directory.GetFiles(xmlFolder, "*.xml", SearchOption.TopDirectoryOnly);
                 foreach (string file in files)
@@ -107,20 +128,77 @@ namespace Behaviac.Design
                     pluginListBox.Items.Add(filename, ws.XMLPlugins.Contains(filename));
                 }
             }
-		}
 
-		/// <summary>
-		/// Handles when the done button is pressed.
-		/// </summary>
-		private void doneButton_Click(object sender, EventArgs e)
-		{
-			string wksName = nameTextBox.Text.Trim();
-            string wksLocation = locationTextBox.Text.Trim();
-            string xmlfolder = xmlFolderTextBox.Text.Trim();
+            SetSourceLanguage();
+
+            checkButtons();
+        }
+
+        private void checkButtons()
+        {
+            string wksName = nameTextBox.Text.Trim();
+            string wksLocation = workspaceTextBox.Text.Trim();
+            string xmlfolder = XMLTextBox.Text.Trim();
+
+            doneButton.Enabled = true;
+            workspaceTextBox.Enabled = true;
+            workspaceButton.Enabled = true;
+            sourceTextBox.Enabled = true;
+            sourceButton.Enabled = true;
+            exportTextBox.Enabled = true;
+            typesExportTextBox.Enabled = true;
+            typesExportButton.Enabled = true;
+            exportButton.Enabled = true;
+            XMLTextBox.Enabled = true;
+            XMLButton.Enabled = true;
+            pluginListBox.Enabled = true;
+
+            if (string.IsNullOrEmpty(wksName))
+            {
+                doneButton.Enabled = false;
+                workspaceTextBox.Enabled = false;
+                workspaceButton.Enabled = false;
+                sourceTextBox.Enabled = false;
+                sourceButton.Enabled = false;
+                exportTextBox.Enabled = false;
+                exportButton.Enabled = false;
+                typesExportTextBox.Enabled = false;
+                typesExportButton.Enabled = false;
+                XMLTextBox.Enabled = false;
+                XMLButton.Enabled = false;
+                pluginListBox.Enabled = false;
+            }
+            else if (string.IsNullOrEmpty(wksLocation))
+            {
+                doneButton.Enabled = false;
+                sourceTextBox.Enabled = false;
+                sourceButton.Enabled = false;
+                exportTextBox.Enabled = false;
+                exportButton.Enabled = false;
+                typesExportTextBox.Enabled = false;
+                typesExportButton.Enabled = false;
+                XMLTextBox.Enabled = false;
+                XMLButton.Enabled = false;
+                pluginListBox.Enabled = false;
+            }
+            else if (string.IsNullOrEmpty(xmlfolder))
+            {
+                //doneButton.Enabled = false;
+            }
+        }
+
+        /// <summary>
+        /// Handles when the done button is pressed.
+        /// </summary>
+        private void doneButton_Click(object sender, EventArgs e)
+        {
+            string wksName = nameTextBox.Text.Trim();
+            string wksLocation = workspaceTextBox.Text.Trim();
+            string xmlfolder = XMLTextBox.Text.Trim();
 
             if (string.IsNullOrEmpty(wksName) ||
-                string.IsNullOrEmpty(wksLocation) ||
-                string.IsNullOrEmpty(xmlfolder))
+                string.IsNullOrEmpty(wksLocation) || !Directory.Exists(wksLocation))
+            //string.IsNullOrEmpty(xmlfolder) || !Directory.Exists(xmlfolder))
             {
                 MessageBox.Show(Resources.WorkspaceSettingWarning, Resources.Warning, MessageBoxButtons.OK);
                 return;
@@ -128,11 +206,9 @@ namespace Behaviac.Design
 
             string driveStr0 = Path.GetPathRoot(wksLocation);
 
-            //string driveStr3 = Path.GetPathRoot(xmlfolder);
-            //Debug.Check(driveStr3 == driveStr0);
-
             // create the given behavior folder if it does not exist
             string behaviorFolder = this.sourceTextBox.Text;
+
             if (string.IsNullOrEmpty(behaviorFolder))
             {
                 behaviorFolder = Path.Combine(wksLocation, "behaviors");
@@ -142,10 +218,13 @@ namespace Behaviac.Design
             Debug.Check(driveStr1 == driveStr0);
 
             if (!Directory.Exists(behaviorFolder))
+            {
                 Directory.CreateDirectory(behaviorFolder);
+            }
 
             // create the given export folder if it does not exist
             string exportFolder = this.exportTextBox.Text;
+
             if (string.IsNullOrEmpty(exportFolder))
             {
                 exportFolder = Path.Combine(wksLocation, "exported");
@@ -155,17 +234,48 @@ namespace Behaviac.Design
             Debug.Check(driveStr2 == driveStr0);
 
             if (!Directory.Exists(exportFolder))
+            {
                 Directory.CreateDirectory(exportFolder);
+            }
+
+            string language = string.IsNullOrEmpty(_sourceLanguage) ? this.languageComboBox.Text : _sourceLanguage;
 
             // create the updated or new workspace
             if (_workspace != null)
             {
-                _workspace = new Workspace(_filename, wksName, xmlfolder, behaviorFolder, exportFolder, _workspace.ExportDatas);
+                _workspace = new Workspace(language, _filename, wksName, xmlfolder, behaviorFolder, exportFolder, _workspace.ExportDatas);
             }
             else
             {
-                _workspace = new Workspace(_filename, wksName, xmlfolder, behaviorFolder, exportFolder);
+                _workspace = new Workspace(language, _filename, wksName, xmlfolder, behaviorFolder, exportFolder);
             }
+
+            if (!Plugin.IsASCII(_workspace.RelativeDefaultExportFolder))
+            {
+                string errorMsg = string.Format("The relative export path '{0}' can only be ASCII", _workspace.RelativeDefaultExportFolder);
+                MessageBox.Show(errorMsg, Resources.FileError, MessageBoxButtons.OK);
+                return;
+            }
+
+            // create the types export folder if it does not exist
+            string typesExportFolder = this.typesExportTextBox.Text;
+
+            if (string.IsNullOrEmpty(typesExportFolder))
+            {
+                typesExportFolder = exportFolder;
+            }
+
+            if (!Directory.Exists(typesExportFolder))
+            {
+                Directory.CreateDirectory(typesExportFolder);
+            }
+
+            string wsFilename = _filename.Replace('/', '\\');
+            typesExportFolder = typesExportFolder.Replace('/', '\\');
+            typesExportFolder = Workspace.MakeRelative(typesExportFolder, wsFilename, true, true);
+            typesExportFolder = typesExportFolder.Replace('\\', '/');
+
+            _workspace.SetExportInfo(language, _workspace.ShouldBeExported(language), _workspace.ExportedUnifiedFile(language), typesExportFolder);
 
             // update plugins
             foreach (string plugin in pluginListBox.CheckedItems)
@@ -173,24 +283,27 @@ namespace Behaviac.Design
                 _workspace.AddXMLPlugin(plugin);
             }
 
+            Workspace.SaveWorkspaceFile(_workspace);
+
             Close();
         }
 
-		/// <summary>
-		/// Handles when the cancel button is pressed.
-		/// </summary>
-		private void cancelButton_Click(object sender, EventArgs e)
-		{
-			// we did not edit or create a workspace
-			_workspace= null;
+        /// <summary>
+        /// Handles when the cancel button is pressed.
+        /// </summary>
+        private void cancelButton_Click(object sender, EventArgs e)
+        {
+            // we did not edit or create a workspace
+            _workspace = null;
 
-			Close();
-		}
+            Close();
+        }
 
         private void setFilename()
         {
             string name = this.nameTextBox.Text.Trim();
-            string location = this.locationTextBox.Text.Trim();
+            string location = this.workspaceTextBox.Text.Trim();
+
             if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(location))
             {
                 _filename = Path.Combine(location, name);
@@ -201,6 +314,8 @@ namespace Behaviac.Design
         private void nameTextBox_TextChanged(object sender, EventArgs e)
         {
             setFilename();
+
+            checkButtons();
         }
 
         private void workspaceButton_Click(object sender, EventArgs e)
@@ -209,22 +324,29 @@ namespace Behaviac.Design
             folderBrowserDialog.ShowNewFolderButton = true;
 
             // assign the user path entered by the user to the browse dialogue
-            if (!string.IsNullOrEmpty(locationTextBox.Text))
-                folderBrowserDialog.SelectedPath = Path.GetFullPath(locationTextBox.Text);
+            if (!string.IsNullOrEmpty(this.workspaceTextBox.Text))
+            {
+                folderBrowserDialog.SelectedPath = Path.GetFullPath(this.workspaceTextBox.Text);
+            }
 
             // assign the path selected by the user to the textbox
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
-                locationTextBox.Text = folderBrowserDialog.SelectedPath;
+                this.workspaceTextBox.Text = folderBrowserDialog.SelectedPath;
 
                 if (string.IsNullOrEmpty(this.sourceTextBox.Text))
                 {
-                    this.sourceTextBox.Text = Path.Combine(locationTextBox.Text, "behaviors");
+                    this.sourceTextBox.Text = Path.Combine(workspaceTextBox.Text, "behaviors");
                 }
 
                 if (string.IsNullOrEmpty(this.exportTextBox.Text))
                 {
-                    this.exportTextBox.Text = Path.Combine(locationTextBox.Text, "exported");
+                    this.exportTextBox.Text = Path.Combine(workspaceTextBox.Text, "exported");
+                }
+
+                if (string.IsNullOrEmpty(this.typesExportTextBox.Text))
+                {
+                    this.typesExportTextBox.Text = Path.Combine(workspaceTextBox.Text, "exported");
                 }
 
                 //if (string.IsNullOrEmpty(this.xmlFolderTextBox.Text))
@@ -234,6 +356,8 @@ namespace Behaviac.Design
 
                 setFilename();
             }
+
+            checkButtons();
         }
 
         /// <summary>
@@ -250,29 +374,35 @@ namespace Behaviac.Design
             folderBrowserDialog.Description = Resources.SelectXMLPluginsFolder;
             folderBrowserDialog.ShowNewFolderButton = false;
 
-            if (!string.IsNullOrEmpty(xmlFolderTextBox.Text))
-				folderBrowserDialog.SelectedPath = Path.GetFullPath(xmlFolderTextBox.Text);
+            if (!string.IsNullOrEmpty(XMLTextBox.Text))
+            {
+                folderBrowserDialog.SelectedPath = Path.GetFullPath(XMLTextBox.Text);
+            }
 
-			if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
+            if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
                 string wsFolder = Path.GetDirectoryName(_filename);
                 string folder = folderBrowserDialog.SelectedPath;
 
-                string driveStr0 = Path.GetPathRoot(this.locationTextBox.Text);
+                string driveStr0 = Path.GetPathRoot(this.workspaceTextBox.Text);
                 string driveStr1 = Path.GetPathRoot(folder);
+
                 if (driveStr1 != driveStr0)
                 {
                     MessageBox.Show(Resources.WorkspaceXmlMetaRootWarning, Resources.Warning, MessageBoxButtons.OK);
                     return;
                 }
 
-                xmlFolderTextBox.Text = Workspace.MakeRelative(folder, wsFolder, true, true);
+                XMLTextBox.Text = folder;
 
                 // Collect the previous XML plugin items.
                 List<string> removedPlugins = new List<string>();
                 foreach (string plugin in pluginListBox.Items)
-                    if (Path.GetExtension(plugin) == ".xml") // xml
+
+                    if (Path.GetExtension(plugin) == ".xml")
+                    { // xml
                         removedPlugins.Add(plugin);
+                    }
 
                 // Remove the previous XML plugin items.
                 foreach (string plugin in removedPlugins)
@@ -283,6 +413,10 @@ namespace Behaviac.Design
                 foreach (string filename in filenames)
                     pluginListBox.Items.Add(Path.GetFileName(filename), true);
             }
+
+            checkButtons();
+
+            SetSourceLanguage();
         }
 
         private void buttonSource_Click(object sender, EventArgs e)
@@ -292,12 +426,14 @@ namespace Behaviac.Design
 
             // assign the user path entered by the user to the browse dialogue
             if (!string.IsNullOrEmpty(this.sourceTextBox.Text))
+            {
                 folderBrowserDialog.SelectedPath = Path.GetFullPath(this.sourceTextBox.Text);
+            }
 
             // assign the path selected by the user to the textbox
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
-                string driveStr0 = Path.GetPathRoot(this.locationTextBox.Text);
+                string driveStr0 = Path.GetPathRoot(this.workspaceTextBox.Text);
                 string driveStr1 = Path.GetPathRoot(folderBrowserDialog.SelectedPath);
 
                 if (driveStr1 != driveStr0)
@@ -308,6 +444,8 @@ namespace Behaviac.Design
 
                 this.sourceTextBox.Text = folderBrowserDialog.SelectedPath;
             }
+
+            checkButtons();
         }
 
         private void buttonExport_Click(object sender, EventArgs e)
@@ -317,12 +455,14 @@ namespace Behaviac.Design
 
             // assign the user path entered by the user to the browse dialogue
             if (!string.IsNullOrEmpty(this.exportTextBox.Text))
+            {
                 folderBrowserDialog.SelectedPath = Path.GetFullPath(this.exportTextBox.Text);
+            }
 
             // assign the path selected by the user to the textbox
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
-                string driveStr0 = Path.GetPathRoot(this.locationTextBox.Text);
+                string driveStr0 = Path.GetPathRoot(this.workspaceTextBox.Text);
                 string driveStr1 = Path.GetPathRoot(folderBrowserDialog.SelectedPath);
 
                 if (driveStr1 != driveStr0)
@@ -333,6 +473,76 @@ namespace Behaviac.Design
 
                 this.exportTextBox.Text = folderBrowserDialog.SelectedPath;
             }
+
+            checkButtons();
         }
-	}
+
+        private void typesExportButton_Click(object sender, EventArgs e)
+        {
+            folderBrowserDialog.Description = Resources.SelectWorkspaceFolder;
+            folderBrowserDialog.ShowNewFolderButton = true;
+
+            // assign the user path entered by the user to the browse dialogue
+            if (!string.IsNullOrEmpty(this.typesExportTextBox.Text))
+            {
+                folderBrowserDialog.SelectedPath = Path.GetFullPath(this.typesExportTextBox.Text);
+            }
+
+            // assign the path selected by the user to the textbox
+            if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
+            {
+                this.typesExportTextBox.Text = folderBrowserDialog.SelectedPath;
+            }
+
+            checkButtons();
+        }
+
+        private void SetSourceLanguage()
+        {
+            _sourceLanguage = "";
+
+            this.languageLabel.Visible = true;
+            this.languageComboBox.Visible = true;
+
+            string metaPath = this.XMLTextBox.Text;
+
+            if (!string.IsNullOrEmpty(metaPath))
+            {
+                foreach (string plugin in pluginListBox.CheckedItems)
+                {
+                    try
+                    {
+                        string metaFile = Path.Combine(metaPath, plugin);
+                        XmlDocument xmlDoc = new XmlDocument();
+                        Encoding utf8WithoutBom = new UTF8Encoding(false);
+                        using (StreamReader fileStream = new StreamReader(metaFile, utf8WithoutBom))
+                        {
+                            xmlDoc.Load(fileStream);
+                        }
+
+                        XmlNode rootNode = xmlDoc.DocumentElement;
+                        XmlNode languageNode = rootNode.Attributes["language"];
+
+                        _sourceLanguage = (languageNode != null) ? languageNode.Value : "";
+
+                        if (!string.IsNullOrEmpty(_sourceLanguage))
+                        {
+                            this.languageLabel.Visible = false;
+                            this.languageComboBox.Visible = false;
+                            this.languageComboBox.Text = _sourceLanguage;
+                            break;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+
+        private void pluginListBox_SelectedValueChanged(object sender, EventArgs e)
+        {
+            SetSourceLanguage();
+        }
+    }
 }

@@ -29,6 +29,11 @@ namespace PluginBehaviac.Nodes
 		{
 		}
 
+        public override string DocLink
+        {
+            get { return "http://www.behaviac.com/language/zh/decorator/#log"; }
+        }
+
         public override string ExportClass
         {
             get { return "DecoratorLog"; }

@@ -29,6 +29,10 @@ namespace PluginBehaviac.Nodes
         {
         }
 
+        public override string DocLink
+        {
+            get { return "http://www.behaviac.com/language/zh/decorator/#successuntilfailureuntil"; }
+        }
 
         public override string ExportClass
         {

@@ -11,43 +11,32 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace behaviac
 {
     public abstract class DecoratorCount : DecoratorNode
     {
-        public DecoratorCount()
-        {
-		}
-        ~DecoratorCount()
-        {
-            this.m_count_var = null;
-        }
-
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
 
-            foreach (property_t p in properties)
+            for (int i = 0; i < properties.Count; ++i)
             {
+                property_t p = properties[i];
                 if (p.name == "Count")
                 {
-                    string typeName = null;
-                    string propertyName = null;
-                    this.m_count_var = Condition.LoadRight(p.value, propertyName, ref typeName);
+                    this.m_count = AgentMeta.ParseProperty(p.value);
                 }
             }
         }
 
         protected virtual int GetCount(Agent pAgent)
         {
-            if (this.m_count_var != null)
+            if (this.m_count != null)
             {
-                Debug.Check(this.m_count_var != null);
-                int count = (int)this.m_count_var.GetValue(pAgent);
+                Debug.Check(this.m_count is CInstanceMember<int>);
+                int count = ((CInstanceMember<int>)this.m_count).GetValue(pAgent);
 
                 return count;
             }
@@ -55,18 +44,10 @@ namespace behaviac
             return 0;
         }
 
-        Property m_count_var;
+        protected IInstanceMember m_count;
 
         protected abstract class DecoratorCountTask : DecoratorTask
         {
-            public DecoratorCountTask()
-            {
-            }
-
-            ~DecoratorCountTask()
-            {
-            }
-
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -94,22 +75,14 @@ namespace behaviac
             {
                 base.onenter(pAgent);
 
-                //don't reset the m_n if it is restarted
-                if (this.m_n == 0 || !this.NeedRestart())
-                {
-                    int count = this.GetCount(pAgent);
+                int count = this.GetCount(pAgent);
 
-                    if (count == 0)
-                    {
-                        return false;
-                    }
-
-                    this.m_n = count;
-                }
-                else
+                if (count == 0)
                 {
-                    Debug.Check(true);
+                    return false;
                 }
+
+                this.m_n = count;
 
                 return true;
             }

@@ -33,34 +33,32 @@
 
 namespace Behaviac.Design
 {
-	partial class MainWindow
-	{
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.IContainer components = null;
+    partial class MainWindow
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
 
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing) {
+            if (disposing && (components != null)) {
+                components.Dispose();
+            }
 
-		#region Windows Form Designer generated code
+            base.Dispose(disposing);
+        }
 
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent()
-		{
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent() {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainWindow));
             WeifenLuo.WinFormsUI.Docking.DockPanelSkin dockPanelSkin1 = new WeifenLuo.WinFormsUI.Docking.DockPanelSkin();
             WeifenLuo.WinFormsUI.Docking.AutoHideStripSkin autoHideStripSkin1 = new WeifenLuo.WinFormsUI.Docking.AutoHideStripSkin();
@@ -82,12 +80,12 @@ namespace Behaviac.Design
             this.fileMenuButton = new System.Windows.Forms.ToolStripMenuItem();
             this.newWorkspaceMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openWorkspaceMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.editWorkspaceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.editWorkspaceMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.reloadWorkspaceMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripSeparator();
             this.connectMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.debugMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.dumpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.analyzeDumpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.dumpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
             this.newBehaviorMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createGroupMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -112,6 +110,8 @@ namespace Behaviac.Design
             this.cutSelectedMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cutTreeMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.copySelectedMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.copySelectedSubtreeMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pasteSelectedMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteSelectedMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.deleteTreeMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
@@ -126,23 +126,21 @@ namespace Behaviac.Design
             this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
             this.metaStoreMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.propertyMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.parMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.breakPointMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.timelineMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
+            this.showNodeIdToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showProfilingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.debugMenuButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.instancePropertyMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripSeparator();
             this.logConsoleMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.errorInfoMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.timelineMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.debugMenuButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.instanceParMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.instancePropertyMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.callToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpMenuButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.overviewMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.tutorialMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.insideBehaviacToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.performanceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.controlsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripSeparator();
-            this.reportAProblemMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.docMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.questionMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.getLatestVersionMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripSeparator();
             this.aboutMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -224,12 +222,12 @@ namespace Behaviac.Design
             this.fileMenuButton.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.newWorkspaceMenuItem,
             this.openWorkspaceMenuItem,
-            this.editWorkspaceToolStripMenuItem,
+            this.editWorkspaceMenuItem,
             this.reloadWorkspaceMenuItem,
             this.toolStripMenuItem1,
             this.connectMenuItem,
-            this.debugMenuItem,
-            this.dumpToolStripMenuItem,
+            this.analyzeDumpMenuItem,
+            this.dumpMenuItem,
             this.toolStripSeparator7,
             this.newBehaviorMenuItem,
             this.createGroupMenuItem,
@@ -267,13 +265,13 @@ namespace Behaviac.Design
             this.openWorkspaceMenuItem.Name = "openWorkspaceMenuItem";
             this.openWorkspaceMenuItem.Click += new System.EventHandler(this.openWorkspaceMenuItem_Click);
             // 
-            // editWorkspaceToolStripMenuItem
+            // editWorkspaceMenuItem
             // 
-            resources.ApplyResources(this.editWorkspaceToolStripMenuItem, "editWorkspaceToolStripMenuItem");
-            this.editWorkspaceToolStripMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.editWorkspaceToolStripMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.editWorkspaceToolStripMenuItem.Name = "editWorkspaceToolStripMenuItem";
-            this.editWorkspaceToolStripMenuItem.Click += new System.EventHandler(this.editWorkspaceToolStripMenuItem_Click);
+            resources.ApplyResources(this.editWorkspaceMenuItem, "editWorkspaceMenuItem");
+            this.editWorkspaceMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.editWorkspaceMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.editWorkspaceMenuItem.Name = "editWorkspaceMenuItem";
+            this.editWorkspaceMenuItem.Click += new System.EventHandler(this.editWorkspaceToolStripMenuItem_Click);
             // 
             // reloadWorkspaceMenuItem
             // 
@@ -298,21 +296,21 @@ namespace Behaviac.Design
             this.connectMenuItem.Name = "connectMenuItem";
             this.connectMenuItem.Click += new System.EventHandler(this.connectMenuItem_Click);
             // 
-            // debugMenuItem
+            // analyzeDumpMenuItem
             // 
-            resources.ApplyResources(this.debugMenuItem, "debugMenuItem");
-            this.debugMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.debugMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.debugMenuItem.Name = "debugMenuItem";
-            this.debugMenuItem.Click += new System.EventHandler(this.debugMenuItem_Click);
+            resources.ApplyResources(this.analyzeDumpMenuItem, "analyzeDumpMenuItem");
+            this.analyzeDumpMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.analyzeDumpMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.analyzeDumpMenuItem.Name = "analyzeDumpMenuItem";
+            this.analyzeDumpMenuItem.Click += new System.EventHandler(this.analyzeDumpMenuItem_Click);
             // 
-            // dumpToolStripMenuItem
+            // dumpMenuItem
             // 
-            resources.ApplyResources(this.dumpToolStripMenuItem, "dumpToolStripMenuItem");
-            this.dumpToolStripMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.dumpToolStripMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.dumpToolStripMenuItem.Name = "dumpToolStripMenuItem";
-            this.dumpToolStripMenuItem.Click += new System.EventHandler(this.dumpToolStripMenuItem_Click);
+            resources.ApplyResources(this.dumpMenuItem, "dumpMenuItem");
+            this.dumpMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.dumpMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.dumpMenuItem.Name = "dumpMenuItem";
+            this.dumpMenuItem.Click += new System.EventHandler(this.dumpToolStripMenuItem_Click);
             // 
             // toolStripSeparator7
             // 
@@ -456,6 +454,8 @@ namespace Behaviac.Design
             this.cutSelectedMenuItem,
             this.cutTreeMenuItem,
             this.copySelectedMenuItem,
+            this.copySelectedSubtreeMenuItem,
+            this.pasteSelectedMenuItem,
             this.deleteSelectedMenuItem,
             this.deleteTreeMenuItem,
             this.toolStripSeparator6,
@@ -514,6 +514,22 @@ namespace Behaviac.Design
             this.copySelectedMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
             this.copySelectedMenuItem.Name = "copySelectedMenuItem";
             this.copySelectedMenuItem.Click += new System.EventHandler(this.copySelectedMenuItem_Click);
+            // 
+            // copySelectedSubtreeMenuItem
+            // 
+            resources.ApplyResources(this.copySelectedSubtreeMenuItem, "copySelectedSubtreeMenuItem");
+            this.copySelectedSubtreeMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.copySelectedSubtreeMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.copySelectedSubtreeMenuItem.Name = "copySelectedSubtreeMenuItem";
+            this.copySelectedSubtreeMenuItem.Click += new System.EventHandler(this.copySelectedSubtreeMenuItem_Click);
+            // 
+            // pasteSelectedMenuItem
+            // 
+            resources.ApplyResources(this.pasteSelectedMenuItem, "pasteSelectedMenuItem");
+            this.pasteSelectedMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.pasteSelectedMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.pasteSelectedMenuItem.Name = "pasteSelectedMenuItem";
+            this.pasteSelectedMenuItem.Click += new System.EventHandler(this.pasteSelectedMenuItem_Click);
             // 
             // deleteSelectedMenuItem
             // 
@@ -587,12 +603,11 @@ namespace Behaviac.Design
             this.toolStripSeparator11,
             this.metaStoreMenuItem,
             this.propertyMenuItem,
-            this.parMenuItem,
             this.breakPointMenuItem,
+            this.timelineMenuItem,
             this.toolStripSeparator9,
-            this.logConsoleMenuItem,
-            this.errorInfoMenuItem,
-            this.timelineMenuItem});
+            this.showNodeIdToolStripMenuItem,
+            this.showProfilingToolStripMenuItem});
             this.viewMenuButton.ForeColor = System.Drawing.SystemColors.WindowText;
             this.viewMenuButton.Name = "viewMenuButton";
             // 
@@ -635,14 +650,6 @@ namespace Behaviac.Design
             this.propertyMenuItem.Name = "propertyMenuItem";
             this.propertyMenuItem.Click += new System.EventHandler(this.propertyMenuItem_Click);
             // 
-            // parMenuItem
-            // 
-            resources.ApplyResources(this.parMenuItem, "parMenuItem");
-            this.parMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.parMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.parMenuItem.Name = "parMenuItem";
-            this.parMenuItem.Click += new System.EventHandler(this.parMenuItem_Click);
-            // 
             // breakPointMenuItem
             // 
             resources.ApplyResources(this.breakPointMenuItem, "breakPointMenuItem");
@@ -651,12 +658,61 @@ namespace Behaviac.Design
             this.breakPointMenuItem.Name = "breakPointMenuItem";
             this.breakPointMenuItem.Click += new System.EventHandler(this.breakPointMenuItem_Click);
             // 
+            // timelineMenuItem
+            // 
+            resources.ApplyResources(this.timelineMenuItem, "timelineMenuItem");
+            this.timelineMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.timelineMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.timelineMenuItem.Name = "timelineMenuItem";
+            this.timelineMenuItem.Click += new System.EventHandler(this.timelineMenuItem_Click);
+            // 
             // toolStripSeparator9
             // 
             resources.ApplyResources(this.toolStripSeparator9, "toolStripSeparator9");
             this.toolStripSeparator9.BackColor = System.Drawing.Color.DarkGray;
             this.toolStripSeparator9.ForeColor = System.Drawing.SystemColors.WindowText;
             this.toolStripSeparator9.Name = "toolStripSeparator9";
+            // 
+            // showNodeIdToolStripMenuItem
+            // 
+            resources.ApplyResources(this.showNodeIdToolStripMenuItem, "showNodeIdToolStripMenuItem");
+            this.showNodeIdToolStripMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.showNodeIdToolStripMenuItem.Name = "showNodeIdToolStripMenuItem";
+            this.showNodeIdToolStripMenuItem.Click += new System.EventHandler(this.showNodeIdToolStripMenuItem_Click);
+            // 
+            // showProfilingToolStripMenuItem
+            // 
+            resources.ApplyResources(this.showProfilingToolStripMenuItem, "showProfilingToolStripMenuItem");
+            this.showProfilingToolStripMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.showProfilingToolStripMenuItem.Name = "showProfilingToolStripMenuItem";
+            this.showProfilingToolStripMenuItem.Click += new System.EventHandler(this.showProfilingToolStripMenuItem_Click);
+            // 
+            // debugMenuButton
+            // 
+            resources.ApplyResources(this.debugMenuButton, "debugMenuButton");
+            this.debugMenuButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.debugMenuButton.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.instancePropertyMenuItem,
+            this.toolStripMenuItem4,
+            this.logConsoleMenuItem,
+            this.errorInfoMenuItem,
+            this.callToolStripMenuItem});
+            this.debugMenuButton.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.debugMenuButton.Name = "debugMenuButton";
+            // 
+            // instancePropertyMenuItem
+            // 
+            resources.ApplyResources(this.instancePropertyMenuItem, "instancePropertyMenuItem");
+            this.instancePropertyMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.instancePropertyMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.instancePropertyMenuItem.Name = "instancePropertyMenuItem";
+            this.instancePropertyMenuItem.Click += new System.EventHandler(this.instancePropertyMenuItem_Click);
+            // 
+            // toolStripMenuItem4
+            // 
+            resources.ApplyResources(this.toolStripMenuItem4, "toolStripMenuItem4");
+            this.toolStripMenuItem4.BackColor = System.Drawing.Color.DarkGray;
+            this.toolStripMenuItem4.Name = "toolStripMenuItem4";
             // 
             // logConsoleMenuItem
             // 
@@ -674,89 +730,26 @@ namespace Behaviac.Design
             this.errorInfoMenuItem.Name = "errorInfoMenuItem";
             this.errorInfoMenuItem.Click += new System.EventHandler(this.errorInfoMenuItem_Click);
             // 
-            // timelineMenuItem
+            // callToolStripMenuItem
             // 
-            resources.ApplyResources(this.timelineMenuItem, "timelineMenuItem");
-            this.timelineMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.timelineMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.timelineMenuItem.Name = "timelineMenuItem";
-            this.timelineMenuItem.Click += new System.EventHandler(this.timelineMenuItem_Click);
-            // 
-            // debugMenuButton
-            // 
-            resources.ApplyResources(this.debugMenuButton, "debugMenuButton");
-            this.debugMenuButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.debugMenuButton.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.instanceParMenuItem,
-            this.instancePropertyMenuItem});
-            this.debugMenuButton.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.debugMenuButton.Name = "debugMenuButton";
-            // 
-            // instanceParMenuItem
-            // 
-            resources.ApplyResources(this.instanceParMenuItem, "instanceParMenuItem");
-            this.instanceParMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.instanceParMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.instanceParMenuItem.Name = "instanceParMenuItem";
-            this.instanceParMenuItem.Click += new System.EventHandler(this.instanceParMenuItem_Click);
-            // 
-            // instancePropertyMenuItem
-            // 
-            resources.ApplyResources(this.instancePropertyMenuItem, "instancePropertyMenuItem");
-            this.instancePropertyMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.instancePropertyMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.instancePropertyMenuItem.Name = "instancePropertyMenuItem";
-            this.instancePropertyMenuItem.Click += new System.EventHandler(this.instancePropertyMenuItem_Click);
+            resources.ApplyResources(this.callToolStripMenuItem, "callToolStripMenuItem");
+            this.callToolStripMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.callToolStripMenuItem.Name = "callToolStripMenuItem";
+            this.callToolStripMenuItem.Click += new System.EventHandler(this.callToolStripMenuItem_Click);
             // 
             // helpMenuButton
             // 
             resources.ApplyResources(this.helpMenuButton, "helpMenuButton");
             this.helpMenuButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.helpMenuButton.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.overviewMenuItem,
-            this.tutorialMenuItem,
-            this.insideBehaviacToolStripMenuItem,
-            this.performanceToolStripMenuItem,
             this.controlsMenuItem,
-            this.toolStripMenuItem2,
-            this.reportAProblemMenuItem,
+            this.docMenuItem,
+            this.questionMenuItem,
             this.getLatestVersionMenuItem,
             this.toolStripMenuItem3,
             this.aboutMenuItem});
             this.helpMenuButton.ForeColor = System.Drawing.SystemColors.WindowText;
             this.helpMenuButton.Name = "helpMenuButton";
-            // 
-            // overviewMenuItem
-            // 
-            resources.ApplyResources(this.overviewMenuItem, "overviewMenuItem");
-            this.overviewMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.overviewMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.overviewMenuItem.Name = "overviewMenuItem";
-            this.overviewMenuItem.Click += new System.EventHandler(this.overviewMenuItem_Click);
-            // 
-            // tutorialMenuItem
-            // 
-            resources.ApplyResources(this.tutorialMenuItem, "tutorialMenuItem");
-            this.tutorialMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.tutorialMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.tutorialMenuItem.Name = "tutorialMenuItem";
-            this.tutorialMenuItem.Click += new System.EventHandler(this.tutorialMenuItem_Click);
-            // 
-            // insideBehaviacToolStripMenuItem
-            // 
-            resources.ApplyResources(this.insideBehaviacToolStripMenuItem, "insideBehaviacToolStripMenuItem");
-            this.insideBehaviacToolStripMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.insideBehaviacToolStripMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.insideBehaviacToolStripMenuItem.Name = "insideBehaviacToolStripMenuItem";
-            this.insideBehaviacToolStripMenuItem.Click += new System.EventHandler(this.insideBehaviacToolStripMenuItem_Click);
-            // 
-            // performanceToolStripMenuItem
-            // 
-            resources.ApplyResources(this.performanceToolStripMenuItem, "performanceToolStripMenuItem");
-            this.performanceToolStripMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.performanceToolStripMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.performanceToolStripMenuItem.Name = "performanceToolStripMenuItem";
-            this.performanceToolStripMenuItem.Click += new System.EventHandler(this.performanceToolStripMenuItem_Click);
             // 
             // controlsMenuItem
             // 
@@ -766,20 +759,21 @@ namespace Behaviac.Design
             this.controlsMenuItem.Name = "controlsMenuItem";
             this.controlsMenuItem.Click += new System.EventHandler(this.controlsMenuItem_Click);
             // 
-            // toolStripMenuItem2
+            // docMenuItem
             // 
-            resources.ApplyResources(this.toolStripMenuItem2, "toolStripMenuItem2");
-            this.toolStripMenuItem2.BackColor = System.Drawing.Color.DarkGray;
-            this.toolStripMenuItem2.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.toolStripMenuItem2.Name = "toolStripMenuItem2";
+            resources.ApplyResources(this.docMenuItem, "docMenuItem");
+            this.docMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.docMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.docMenuItem.Name = "docMenuItem";
+            this.docMenuItem.Click += new System.EventHandler(this.docMenuItem_Click);
             // 
-            // reportAProblemMenuItem
+            // questionMenuItem
             // 
-            resources.ApplyResources(this.reportAProblemMenuItem, "reportAProblemMenuItem");
-            this.reportAProblemMenuItem.BackColor = System.Drawing.Color.DarkGray;
-            this.reportAProblemMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.reportAProblemMenuItem.Name = "reportAProblemMenuItem";
-            this.reportAProblemMenuItem.Click += new System.EventHandler(this.reportAProblemMenuItem_Click);
+            resources.ApplyResources(this.questionMenuItem, "questionMenuItem");
+            this.questionMenuItem.BackColor = System.Drawing.Color.DarkGray;
+            this.questionMenuItem.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.questionMenuItem.Name = "questionMenuItem";
+            this.questionMenuItem.Click += new System.EventHandler(this.questionMenuItem_Click);
             // 
             // getLatestVersionMenuItem
             // 
@@ -819,21 +813,21 @@ namespace Behaviac.Design
             this.ResumeLayout(false);
             this.PerformLayout();
 
-		}
+        }
 
-		#endregion
+        #endregion
 
         private WeifenLuo.WinFormsUI.Docking.DockPanel dockPanel;
         private System.Windows.Forms.ToolStrip toolStrip;
         private System.Windows.Forms.ToolStripMenuItem fileMenuButton;
         private System.Windows.Forms.ToolStripMenuItem newWorkspaceMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openWorkspaceMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem editWorkspaceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem editWorkspaceMenuItem;
         private System.Windows.Forms.ToolStripMenuItem reloadWorkspaceMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem connectMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem debugMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem dumpToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem analyzeDumpMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem dumpMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
         private System.Windows.Forms.ToolStripMenuItem newBehaviorMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createGroupMenuItem;
@@ -871,27 +865,27 @@ namespace Behaviac.Design
         private System.Windows.Forms.ToolStripMenuItem findAllMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
         private System.Windows.Forms.ToolStripMenuItem propertyMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem parMenuItem;
         private System.Windows.Forms.ToolStripMenuItem breakPointMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator9;
-        private System.Windows.Forms.ToolStripMenuItem logConsoleMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem errorInfoMenuItem;
         private System.Windows.Forms.ToolStripMenuItem timelineMenuItem;
         private System.Windows.Forms.ToolStripMenuItem debugMenuButton;
-        private System.Windows.Forms.ToolStripMenuItem instanceParMenuItem;
         private System.Windows.Forms.ToolStripMenuItem instancePropertyMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpMenuButton;
-        private System.Windows.Forms.ToolStripMenuItem overviewMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem tutorialMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem performanceToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem controlsMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem2;
-        private System.Windows.Forms.ToolStripMenuItem reportAProblemMenuItem;
         private System.Windows.Forms.ToolStripMenuItem getLatestVersionMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem3;
         private System.Windows.Forms.ToolStripMenuItem aboutMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem insideBehaviacToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem metaStoreMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pasteSelectedMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem4;
+        private System.Windows.Forms.ToolStripMenuItem logConsoleMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem errorInfoMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem callToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem copySelectedSubtreeMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem docMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem questionMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showNodeIdToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showProfilingToolStripMenuItem;
 
     }
 }

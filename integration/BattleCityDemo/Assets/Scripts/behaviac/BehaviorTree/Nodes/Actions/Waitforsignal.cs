@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace behaviac
@@ -21,11 +19,11 @@ namespace behaviac
     {
         public WaitforSignal()
         {
-		}
-
-        ~WaitforSignal()
-        {
         }
+
+        //~WaitforSignal()
+        //{
+        //}
 
         protected override void load(int version, string agentType, List<property_t> properties)
         {
@@ -42,6 +40,12 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
+        public bool CheckIfSignaled(Agent pAgent)
+        {
+            bool ret = this.EvaluteCustomCondition(pAgent);
+            return ret;
+        }
+
         protected override BehaviorTask createTask()
         {
             WaitforSignalTask pTask = new WaitforSignalTask();
@@ -51,16 +55,17 @@ namespace behaviac
     }
 
     // ============================================================================
-    class WaitforSignalTask : SingeChildTask
+    internal class WaitforSignalTask : SingeChildTask
     {
         public WaitforSignalTask()
             : base()
         {
             m_bTriggered = false;
         }
-        ~WaitforSignalTask()
-        {
-        }
+
+        //~WaitforSignalTask()
+        //{
+        //}
 
         public override void copyto(BehaviorTask target)
         {
@@ -80,37 +85,16 @@ namespace behaviac
             node.setAttr(triggeredId, this.m_bTriggered);
         }
 
-        public override void load(ISerializableNode node)
-        {
-            base.load(node);
-        }
-
-        public override void Init(BehaviorNode node)
-        {
-            base.Init(node);
-        }
-
-		public override bool CheckPredicates(Agent pAgent)
-		{
-			//when there are no predicates, not triggered
-			bool bTriggered = false;
-			if (this.m_attachments != null)
-			{
-				bTriggered = base.CheckPredicates(pAgent);
-			}
-
-			return bTriggered;
-		}
-
         protected override bool onenter(Agent pAgent)
         {
-			this.m_bTriggered = false;
+            this.m_bTriggered = false;
 
             return true;
         }
 
         protected override void onexit(Agent pAgent, EBTStatus s)
         {
+            base.onexit(pAgent, s);
         }
 
         protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
@@ -122,7 +106,8 @@ namespace behaviac
 
             if (!this.m_bTriggered)
             {
-                this.m_bTriggered = this.CheckPredicates(pAgent);
+                WaitforSignal node = this.m_node as WaitforSignal;
+                this.m_bTriggered = node.CheckIfSignaled(pAgent);
             }
 
             if (this.m_bTriggered)
@@ -140,12 +125,6 @@ namespace behaviac
             return EBTStatus.BT_RUNNING;
         }
 
-        protected override bool isContinueTicking()
-        {
-            //return !this.m_bTriggered;
-            return true;
-        }
-
-        bool m_bTriggered;
+        private bool m_bTriggered;
     }
 }

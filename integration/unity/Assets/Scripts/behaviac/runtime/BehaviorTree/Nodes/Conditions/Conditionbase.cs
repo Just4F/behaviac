@@ -18,9 +18,10 @@ namespace behaviac
         public ConditionBase()
         {
         }
-        ~ConditionBase()
-        {
-		}
+
+        //~ConditionBase()
+        //{
+        //}
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
         {
@@ -34,32 +35,30 @@ namespace behaviac
     }
 
     // ============================================================================
-    class ConditionBaseTask : LeafTask
+    internal class ConditionBaseTask : LeafTask
     {
         public ConditionBaseTask()
         {
-		}
-
-        ~ConditionBaseTask()
-        {
         }
+
+        //~ConditionBaseTask()
+        //{
+        //}
 
         protected override bool onenter(Agent pAgent)
         {
             return true;
         }
+
         protected override void onexit(Agent pAgent, EBTStatus s)
         {
         }
 
         protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
         {
-            return EBTStatus.BT_SUCCESS;
-        }
+            Debug.Check(childStatus == EBTStatus.BT_RUNNING);
 
-        protected override bool isContinueTicking()
-        {
-            return false;
+            return EBTStatus.BT_SUCCESS;
         }
     }
 }

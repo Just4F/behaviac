@@ -14,6 +14,7 @@
 #include "behaviac/base/core/config.h"
 #include "behaviac/base/core/assert_t.h"
 #include "behaviac/base/core/system.h"
+#include "behaviac/base/core/thread/thread.h"
 
 #if BEHAVIAC_COMPILER_MSVC
 #include <windows.h>
@@ -119,52 +120,6 @@ namespace behaviac
     static Char g_ExeName[BEHAVIAC_CFG_SETEXENAME_BUF_SIZE];
 #endif
 
-    bool IsBadReadPointer(void* ptr, uint32_t memSize)
-    {
-        // Check buffer validity using VirtualQuery. This is somewhat safer than trying to rewrite the same value everywhere
-        // Anyway, this should only be used in debug code to avoid accessing invalid members(such as in MemDebug implementation)
-        bool isBad = true;
-        MEMORY_BASIC_INFORMATION info;
-        size_t result = VirtualQuery(ptr, &info, sizeof(info));
-
-        if (result == sizeof(info))
-        {
-            // Check that the associated pages are committed and with right protection level. Also, check
-            // that the whole buffer pointed to by the pointer is within the same protection region.
-            if (info.State == MEM_COMMIT &&
-                (info.AllocationProtect & (PAGE_READWRITE | PAGE_READONLY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) &&
-                BEHAVIAC_PTR_TO_ADDR(ptr) + memSize < BEHAVIAC_PTR_TO_ADDR(info.BaseAddress) + info.RegionSize)
-            {
-                isBad = false;
-            }
-        }
-
-        return isBad;
-    }
-
-    bool IsBadWritePointer(void* ptr, uint32_t memSize)
-    {
-        // Check buffer validity using VirtualQuery. This is a somewhat safer than trying to rewrite the same value everywhere
-        // Anyway, this should only be used in debug code to avoid accessing invalid members(such as in MemDebug implementation)
-        bool isBad = true;
-        MEMORY_BASIC_INFORMATION info;
-        size_t result = VirtualQuery(ptr, &info, sizeof(info));
-
-        if (result == sizeof(info))
-        {
-            // Check that the associated pages are committed and with right protection level. Also, check
-            // that the whole buffer pointed to by the pointer is within the same protection region.
-            if (info.State == MEM_COMMIT &&
-                (info.AllocationProtect & (PAGE_READWRITE | PAGE_EXECUTE_WRITECOPY | PAGE_EXECUTE_READWRITE)) &&
-                BEHAVIAC_PTR_TO_ADDR(ptr) + memSize < BEHAVIAC_PTR_TO_ADDR(info.BaseAddress) + info.RegionSize)
-            {
-                isBad = false;
-            }
-        }
-
-        return isBad;
-    }
-
     const Char* GetExeName(Char* exeNameBuffer, uint32_t exeNameBufferSize)
     {
 #if BEHAVIAC_CFG_SETEXENAME_BUF_SIZE > 0
@@ -172,6 +127,7 @@ namespace behaviac
         if (g_ExeName[0] != 0)
             memcpy(exeNameBuffer, g_ExeName,
                    (BEHAVIAC_CFG_SETEXENAME_BUF_SIZE > exeNameBufferSize ? exeNameBufferSize : BEHAVIAC_CFG_SETEXENAME_BUF_SIZE));
+
         else
 #endif
         {
@@ -235,11 +191,11 @@ namespace behaviac
 
     void* MemCmpPattern(const void* buffer, uint8_t value, size_t size)
     {
-        uint8_t* ptr             = (uint8_t*)buffer;
-        const uint32_t U32Value  = value << 24 | value << 16 | value << 8 | value;
-        const uint64_t U64Value  = BEHAVIAC_MAKE64(U32Value, U32Value);
-        const uint8_t* U8End     = ptr + size;
-        const uint8_t* U64End    = U8End - sizeof(uint64_t);
+        uint8_t* ptr = (uint8_t*)buffer;
+        const uint32_t U32Value = value << 24 | value << 16 | value << 8 | value;
+        const uint64_t U64Value = BEHAVIAC_MAKE64(U32Value, U32Value);
+        const uint8_t* U8End = ptr + size;
+        const uint8_t* U64End = U8End - sizeof(uint64_t);
 
         while (ptr < U8End && !BEHAVIAC_PTR_ALIGNED(ptr, sizeof(uint64_t)))
         {
@@ -256,6 +212,7 @@ namespace behaviac
             if (*((uint64_t*)ptr) == U64Value)
             {
                 continue;
+
             }
             else
             {
@@ -284,11 +241,11 @@ namespace behaviac
 
     void* MemCmpPatternReverse(const void* buffer, uint8_t value, size_t size)
     {
-        uint8_t* ptr             = (uint8_t*)buffer + size;
-        const uint32_t U32Value  = value << 24 | value << 16 | value << 8 | value;
-        const uint64_t U64Value  = BEHAVIAC_MAKE64(U32Value, U32Value);
-        const uint8_t* U8End     = (uint8_t*)buffer;
-        const uint8_t* U64End    = U8End + sizeof(uint64_t);
+        uint8_t* ptr = (uint8_t*)buffer + size;
+        const uint32_t U32Value = value << 24 | value << 16 | value << 8 | value;
+        const uint64_t U64Value = BEHAVIAC_MAKE64(U32Value, U32Value);
+        const uint8_t* U8End = (uint8_t*)buffer;
+        const uint8_t* U64End = U8End + sizeof(uint64_t);
 
         while (ptr > U8End && !BEHAVIAC_PTR_ALIGNED(ptr, sizeof(uint64_t)))
         {
@@ -307,6 +264,7 @@ namespace behaviac
             if (*((uint64_t*)ptr) == U64Value)
             {
                 continue;
+
             }
             else
             {
@@ -340,7 +298,6 @@ namespace behaviac
     {
         return ::memcpy(dest, src, num);
     }
-
 }
 
 #endif//#if BEHAVIAC_COMPILER_MSVC

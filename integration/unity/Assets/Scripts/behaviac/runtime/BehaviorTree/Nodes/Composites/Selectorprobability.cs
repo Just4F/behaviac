@@ -11,39 +11,22 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace behaviac
 {
     public class SelectorProbability : BehaviorNode
     {
-        public SelectorProbability()
-        {
-		}
-
-        ~SelectorProbability()
-        {
-            m_method = null;
-        }
-
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
 
-            foreach (property_t p in properties)
+            for (int i = 0; i < properties.Count; ++i)
             {
+                property_t p = properties[i];
                 if (p.name == "RandomGenerator")
                 {
-                    if (p.value[0] != '\0')
-                    {
-                        this.m_method = Action.LoadMethod(p.value);
-                    }//if (p.value[0] != '\0')
-                }
-                else
-                {
-                    //Debug.Check(0, "unrecognised property %s", p.name);
+                    this.m_method = AgentMeta.ParseMethod(p.value);
                 }
             }
         }
@@ -80,7 +63,7 @@ namespace behaviac
             return pTask;
         }
 
-        protected CMethodBase m_method;
+        protected IMethod m_method;
 
         ///Executes behaviors randomly, based on a given set of weights.
         /** The weights are not percentages, but rather simple ratios.
@@ -89,16 +72,8 @@ namespace behaviac
         This weight system is intended to facilitate the fine-tuning of behaviors.
         */
 
-        class SelectorProbabilityTask : CompositeTask
+        private class SelectorProbabilityTask : CompositeTask
         {
-            public SelectorProbabilityTask()
-            {
-			}
-
-            ~SelectorProbabilityTask()
-            {
-            }
-
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -144,6 +119,7 @@ namespace behaviac
             protected override void onexit(Agent pAgent, EBTStatus s)
             {
                 this.m_activeChildIndex = CompositeTask.InvalidChildIndex;
+                base.onexit(pAgent, s);
             }
 
             protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
@@ -168,8 +144,8 @@ namespace behaviac
 
                 Debug.Check(this.m_weightingMap.Count == this.m_children.Count);
 
-				//generate a number between 0 and the sum of the weights
-				float chosen = this.m_totalSum * CompositeStochastic.CompositeStochasticTask.GetRandomValue(pSelectorProbabilityNode.m_method, pAgent);
+                //generate a number between 0 and the sum of the weights
+                float chosen = this.m_totalSum * CompositeStochastic.CompositeStochasticTask.GetRandomValue(pSelectorProbabilityNode.m_method, pAgent);
 
                 float sum = 0;
 
@@ -179,7 +155,7 @@ namespace behaviac
 
                     sum += w;
 
-					if (w > 0 && sum >= chosen) //execute this node
+                    if (w > 0 && sum >= chosen)   //execute this node
                     {
                         BehaviorTask pChild = this.m_children[i];
 
@@ -201,8 +177,8 @@ namespace behaviac
                 return EBTStatus.BT_FAILURE;
             }
 
-            List<int> m_weightingMap = new List<int>();
-            int m_totalSum;
+            private List<int> m_weightingMap = new List<int>();
+            private int m_totalSum;
         }
     }
 }

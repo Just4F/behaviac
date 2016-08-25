@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.Design;
@@ -31,56 +32,80 @@ namespace Behaviac.Design
         private static ErrorInfoDock _dock = null;
         private static bool _shouldScroll = true;
 
-        internal static void Inspect()
-        {
-            if (_dock == null)
-            {
+        internal static void Inspect() {
+            if (_dock == null) {
                 _dock = new ErrorInfoDock();
+
                 _dock.Show(MainWindow.Instance.DockPanel, WeifenLuo.WinFormsUI.Docking.DockState.DockBottom);
-            }
-            else
-            {
+
+            } else {
                 _dock.Show();
             }
         }
 
-        internal static void CloseAll()
-        {
-            if (_dock != null)
+        internal static void CloseAll() {
+            if (_dock != null) {
                 _dock.Close();
+            }
         }
 
-        internal static void Clear()
-        {
-            if (_dock != null)
+        internal static void Clear() {
+            if (_dock != null) {
                 _dock.errorListBox.Items.Clear();
+            }
         }
 
-        internal static void WriteLine(string log)
+        internal static void WriteLineWithTime(string log)
         {
-            if (_dock != null)
-            {
+            string dt = DateTime.Now.ToString();
+            string msg = string.Format("[{0}] {1}", dt, log);
+            WriteLine(msg);
+        }
+
+        internal static void WriteLine(string log) {
+            if (_dock != null && log != null) {
                 _dock.errorListBox.BeginUpdate();
 
-                _dock.errorListBox.Items.Add(log);
-                if (_shouldScroll)
+                string[] lines = log.Split('\n');
+                foreach (string line in lines)
+                {
+                    _dock.errorListBox.Items.Add(line);
+                }
+
+                if (_shouldScroll) {
                     scrollToEnd();
+                }
 
                 _dock.errorListBox.EndUpdate();
             }
         }
 
-        private static void scrollToEnd()
+        public static void WriteExportTypeInfo()
         {
+            string exportPathRelative = Workspace.Current.GetExportFolder(Workspace.Current.Language);
+
+            string exportPath = Path.Combine(exportPathRelative, "behaviac_generated/types");
+
+            string exportPathAbs = Path.Combine(Workspace.Current.DefaultExportFolder, exportPath);
+
+            string exportPathFull = Path.GetFullPath(exportPathAbs);
+
+            string msg = string.Format(Resources.ExportMessages, exportPathFull);
+
+            ErrorInfoDock.Inspect();
+            ErrorInfoDock.WriteLineWithTime(msg);
+        }
+
+        private static void scrollToEnd() {
             //_dock.errorListBox.SelectedIndex = _dock.errorListBox.Items.Count - 1;
             _dock.errorListBox.TopIndex = _dock.errorListBox.Items.Count - 1;
             _shouldScroll = true;
         }
 
-        public ErrorInfoDock()
-        {
-            if (_dock == null)
+        public ErrorInfoDock() {
+            if (_dock == null) {
                 _dock = this;
+            }
 
             InitializeComponent();
 
@@ -89,8 +114,7 @@ namespace Behaviac.Design
             FrameStatePool.AddLogHandler += FrameStatePool_AddLogHandler;
         }
 
-        protected override void OnClosed(EventArgs e)
-        {
+        protected override void OnClosed(EventArgs e) {
             _dock = null;
 
             FrameStatePool.AddLogHandler -= FrameStatePool_AddLogHandler;
@@ -98,54 +122,47 @@ namespace Behaviac.Design
             base.OnClosed(e);
         }
 
-        private void FrameStatePool_AddLogHandler(int frame, string log)
-        {
+        private void FrameStatePool_AddLogHandler(int frame, string log) {
             errorListBox.Items.Add(log);
 
-            if (_shouldScroll)
+            if (_shouldScroll) {
                 scrollToEnd();
+            }
         }
 
-        private void copyMenuItem_Click(object sender, EventArgs e)
-        {
-            if (errorListBox.SelectedIndices.Count > 0)
-            {
+        private void copyMenuItem_Click(object sender, EventArgs e) {
+            if (errorListBox.SelectedIndices.Count > 0) {
                 string log = string.Empty;
-                foreach (int index in errorListBox.SelectedIndices)
-                {
+                foreach(int index in errorListBox.SelectedIndices) {
                     log += errorListBox.Items[index];
                 }
 
-                if (!string.IsNullOrEmpty(log))
+                if (!string.IsNullOrEmpty(log)) {
                     Clipboard.SetText(log);
+                }
             }
         }
 
-        private void clearAllMenuItem_Click(object sender, EventArgs e)
-        {
+        private void clearAllMenuItem_Click(object sender, EventArgs e) {
             Clear();
         }
 
-        private void logListBox_SelectedIndexChanged(object sender, EventArgs e)
-        {
+        private void logListBox_SelectedIndexChanged(object sender, EventArgs e) {
             _shouldScroll = (errorListBox.SelectedIndex == errorListBox.Items.Count - 1);
         }
 
-        private void logListBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.End)
-            {
+        private void logListBox_KeyDown(object sender, KeyEventArgs e) {
+            if (e.KeyCode == Keys.End) {
                 _shouldScroll = true;
-            }
-            else if (e.Control && e.KeyCode == Keys.A)
-            {
+
+            } else if (e.Control && e.KeyCode == Keys.A) {
                 errorListBox.BeginUpdate();
                 SelectionMode selectionMode = errorListBox.SelectionMode;
                 errorListBox.SelectionMode = SelectionMode.MultiSimple;
 
                 errorListBox.SelectedIndices.Clear();
-                for (int i = 0; i < errorListBox.Items.Count; ++i)
-                {
+
+                for (int i = 0; i < errorListBox.Items.Count; ++i) {
                     errorListBox.SelectedIndices.Add(i);
                 }
 

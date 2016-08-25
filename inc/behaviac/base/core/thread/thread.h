@@ -17,35 +17,38 @@
 #include "behaviac/base/core/compiler.h"
 
 #if BEHAVIAC_COMPILER_MSVC
-	typedef unsigned int THREAD_ID_TYPE;
-	#define __STDCALL __stdcall
-#elif BEHAVIAC_COMPILER_APPLE || BEHAVIAC_COMPILER_ANDROID || BEHAVIAC_COMPILER_GCC_LINUX
-	#include <sys/types.h>
-	#include <pthread.h>
-	typedef pthread_t* THREAD_ID_TYPE;
-	#define __STDCALL
+#define BEHAVIAC_STDCALL __stdcall
 #else
-	typedef __pthread_t* THREAD_ID_TYPE;
-	#define __STDCALL
+#include <sys/types.h>
+#include <pthread.h>
+#define BEHAVIAC_STDCALL
 #endif//BEHAVIAC_COMPILER_MSVC
-
-// Invalid thread Id definition
-#define BEHAVIAC_INVALID_TID        0xFFFFFFFF
 
 
 namespace behaviac
 {
-	BEHAVIAC_API THREAD_ID_TYPE GetTID();
+	typedef unsigned int THREAD_ID_TYPE;
+}
 
-	namespace thread
-	{
-		typedef void*		ThreadHandle;
-		typedef unsigned int (__STDCALL ThreadFunction)(void* arg);
+// Invalid thread Id definition
+#define BEHAVIAC_INVALID_TID        0xFFFFFFFF
 
-		BEHAVIAC_API bool IsThreadTerminated(behaviac::thread::ThreadHandle hThread);
-		BEHAVIAC_API ThreadHandle CreateAndStartThread(thread::ThreadFunction* function, void* arg, size_t stackSize);
-		BEHAVIAC_API void StopThread(ThreadHandle th);
-	}//namespace thread
+namespace behaviac
+{
+    BEHAVIAC_API THREAD_ID_TYPE GetTID();
+
+	/// Check if the given thread ID is valid.
+	BEHAVIAC_API bool IsValidThread(THREAD_ID_TYPE threadID);
+
+    namespace thread
+    {
+        typedef void*		ThreadHandle;
+        typedef unsigned int (BEHAVIAC_STDCALL ThreadFunction)(void* arg);
+
+        BEHAVIAC_API bool IsThreadTerminated(behaviac::thread::ThreadHandle hThread);
+        BEHAVIAC_API ThreadHandle CreateAndStartThread(thread::ThreadFunction* function, void* arg, size_t stackSize);
+        BEHAVIAC_API void StopThread(ThreadHandle th);
+    }//namespace thread
 }//namespace behaviac
 
 #endif //BEHAVIAC_PS_THREAD__INCLUDED

@@ -1,4 +1,4 @@
-﻿/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Tencent is pleased to support the open source community by making behaviac available.
 //
 // Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
@@ -17,12 +17,28 @@ using System.Text;
 using System.IO;
 using Behaviac.Design;
 using Behaviac.Design.Nodes;
-using Behaviac.Design.Attributes;
 using PluginBehaviac.Nodes;
+using PluginBehaviac.DataExporters;
 
 namespace PluginBehaviac.NodeExporters
 {
     public class DecoratorLoopCppExporter : DecoratorCountCppExporter
     {
+        protected override bool ShouldGenerateClass(Node node)
+        {
+            DecoratorLoop decoratorLoop = node as DecoratorLoop;
+            return (decoratorLoop != null);
+        }
+
+        protected override void GenerateConstructor(Node node, StreamWriter stream, string indent, string className)
+        {
+            base.GenerateConstructor(node, stream, indent, className);
+
+            DecoratorLoop decoratorLoop = node as DecoratorLoop;
+            if (decoratorLoop == null)
+                return;
+
+            stream.WriteLine("{0}\t\t\tm_bDoneWithinFrame = {1};", indent, decoratorLoop.DoneWithinFrame ? "true" : "false");
+        }
     }
 }

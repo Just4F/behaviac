@@ -74,16 +74,12 @@ namespace Behaviac.Design
         {
             this.Disposed -= BehaviorTreeList_Disposed;
 
-            if (this.toolStrip1 != null)
+            if (this.toolStrip != null)
             {
-                this.toolStrip1.Dispose();
-                this.toolStrip1 = null;
+                this.toolStrip.Dispose();
+                this.toolStrip = null;
             }
-            if (this.folderBrowserDialog != null)
-            {
-                this.folderBrowserDialog.Dispose();
-                this.folderBrowserDialog = null;
-            }
+
             if (this.openFileDialog != null)
             {
                 this.openFileDialog.Dispose();
@@ -108,9 +104,9 @@ namespace Behaviac.Design
                     this.connectButton.Text = Resources.ConnectServer + " (Ctrl+L)";
                     this.connectButton.Enabled = true;
 
-                    this.dumpButton.Text = Resources.AnalyzeDump;
-                    this.dumpButton.Image = Resources.File_Open;
-                    this.dumpButton.Enabled = true;
+                    this.analyzeDumpButton.Text = Resources.AnalyzeDump;
+                    this.analyzeDumpButton.Image = Resources.File_Open;
+                    this.analyzeDumpButton.Enabled = true;
                     break;
 
                 case EditModes.Connect:
@@ -118,16 +114,17 @@ namespace Behaviac.Design
                     this.connectButton.Image = Resources.disconnect;
                     this.connectButton.Enabled = true;
 
-                    this.dumpButton.Image = Resources.File_Open;
-                    this.dumpButton.Enabled = false;
+                    this.analyzeDumpButton.Image = Resources.File_Open;
+                    this.analyzeDumpButton.Enabled = false;
+
                     break;
 
                 case EditModes.Analyze:
                     this.connectButton.Enabled = false;
 
-                    this.dumpButton.Text = Resources.StopAnalyzing;
-                    this.dumpButton.Image = Resources.File_Delete;
-                    this.dumpButton.Enabled = true;
+                    this.analyzeDumpButton.Text = Resources.StopAnalyzingDump;
+                    this.analyzeDumpButton.Image = Resources.File_Delete;
+                    this.analyzeDumpButton.Enabled = true;
                     break;
             }
         }
@@ -148,11 +145,14 @@ namespace Behaviac.Design
             _fileManagers.Clear();
 
             treeView.Nodes.Clear();
+
             if (nodeTreeList != null)
+            {
                 nodeTreeList.Clear();
+            }
         }
 
-        private void RegisterPlugin(Assembly assembly, Plugin plugin, object nodeList, bool bAddNodes)
+        private void RegisterPlugin(Assembly assembly, Plugin plugin, ImageList imageList, bool bAddNodes)
         {
             // register the plugin
             Plugin.AddLoadedPlugin(assembly);
@@ -160,14 +160,9 @@ namespace Behaviac.Design
             Plugin.RegisterAgentTypes(assembly);
 
             // register all the groups we need in the node explorer
-            if (bAddNodes && nodeList is NodeTreeList)
+            if (bAddNodes && imageList != null)
             {
-                NodeTreeList nodeTreeList = nodeList as NodeTreeList;
-                List<Image> images = Plugin.RegisterNodeDesc(assembly, nodeTreeList.ImageList.Images.Count);
-                foreach (Image image in images)
-                {
-                    nodeTreeList.ImageList.Images.Add(image);
-                }
+                Plugin.RegisterNodeDesc(assembly, imageList.Images.Count);
             }
             else
             {
@@ -184,30 +179,21 @@ namespace Behaviac.Design
         /// <param name="path">The directory which is the root for the given list of plugins.</param>
         internal void LoadPlugins(NodeTreeList nodeTreeList, bool bAddNodes)
         {
-            Plugin.InitNodeGroups();
 
-            Plugin.LoadPlugins(RegisterPlugin, nodeTreeList, bAddNodes);
+            Plugin.LoadPlugins(RegisterPlugin, nodeTreeList.ImageList, bAddNodes);
 
             if (bAddNodes)
             {
-                // create the tree nodes for all behaviac nodes.
+                // create the tree nodes for all behavior nodes.
                 TreeView root = (nodeTreeList != null) ? nodeTreeList.TreeView : treeView;
-                foreach (NodeGroup group in Plugin.NodeGroups)
-                {
-                    group.Register(root.Nodes);
-                }
 
-                if (root.GetNodeCount(false) > 0)
-                {
-                    UIUtilities.SortTreeview(root.Nodes);
-                    root.SelectedNode = root.Nodes[0];
-                }
+                nodeTreeList.ToggleShowSelectedNodes(Plugin.OnlyShowFrequentlyUsedNodes, root);
             }
 
             // update labels
             newBehaviorButton.Text = Plugin.GetResourceString("NewBehavior") + " (Ctrl+N)";
-            _behaviorGroupName = Plugin.GetResourceString("BehaviorGroupName");
-            _prefabGroupName = Plugin.GetResourceString("PrefabGroupName");
+            //_behaviorGroupName = Plugin.GetResourceString("BehaviorGroupName");
+            //_prefabGroupName = Plugin.GetResourceString("PrefabGroupName");
         }
 
         internal void UnLoadXMLPlugins()
@@ -216,9 +202,10 @@ namespace Behaviac.Design
             Plugin.UnRegisterAgentTypes();
         }
 
-        internal bool LoadXMLPlugins(string path, IList<string> files)
+        internal void LoadXMLPlugins(string path, IList<string> files)
         {
             string dllFilename = ImporterXML.ImportXML(path, files);
+
             if (!string.IsNullOrEmpty(dllFilename))
             {
                 Assembly assembly = Assembly.LoadFile(dllFilename);
@@ -229,11 +216,7 @@ namespace Behaviac.Design
                 Plugin.RegisterAgentTypes(assembly);
 
                 Plugin.PrepareInstanceTypes();
-
-                return true;
             }
-
-            return false;
         }
 
         /// <summary>
@@ -297,8 +280,11 @@ namespace Behaviac.Design
         {
             // search for an existing behavior group
             foreach (TreeNode node in list)
+
                 if (node.Text == name)
+                {
                     return node;
+                }
 
             // create a new group
             TreeNode newnode = new TreeNode(name, (int)NodeIcon.FolderClosed, (int)NodeIcon.FolderClosed);
@@ -346,8 +332,11 @@ namespace Behaviac.Design
 
             // get the different groups
             string[] groups = name.Split('\\');
-            if (isFile && groups.Length < 2)  // if this is a file with no subfolder, no group needs to be created
+
+            if (isFile && groups.Length < 2)
+            { // if this is a file with no subfolder, no group needs to be created
                 return null;
+            }
 
             // get the group for the behaviors
             TreeNodeCollection list = GetBehaviorGroup(treeView.Nodes, _behaviorGroupName, _behaviorFolder).Nodes;
@@ -363,9 +352,16 @@ namespace Behaviac.Design
 
                 // create the behavior group
                 group = GetBehaviorGroup(list, groups[i], folder);
+
                 if (group == null)
+                {
                     return null;
-                else list = group.Nodes;
+                }
+
+                else
+                {
+                    list = group.Nodes;
+                }
             }
 
             return group;
@@ -381,25 +377,34 @@ namespace Behaviac.Design
         private TreeNode GetBehaviorNode(TreeNode node, string identifier, bool isFilename)
         {
             NodeTag nodetag = (NodeTag)node.Tag;
+
             if (nodetag.Type == NodeTagType.Behavior || nodetag.Type == NodeTagType.Prefab)
             {
                 if (isFilename)
                 {
                     if (identifier == nodetag.Filename)
+                    {
                         return node;
+                    }
+
                 }
                 else
                 {
                     if (identifier == node.Text)
+                    {
                         return node;
+                    }
                 }
             }
 
             foreach (TreeNode child in node.Nodes)
             {
                 TreeNode res = GetBehaviorNode(child, identifier, isFilename);
+
                 if (res != null)
+                {
                     return res;
+                }
             }
 
             return null;
@@ -414,7 +419,9 @@ namespace Behaviac.Design
         private TreeNode GetBehaviorNode(string identifier, bool isFilename)
         {
             if (string.IsNullOrEmpty(identifier))
+            {
                 return null;
+            }
 
             // Try to get the behavior node.
             TreeNode behaviors = GetBehaviorGroup(treeView.Nodes, _behaviorGroupName, _behaviorFolder);
@@ -433,7 +440,9 @@ namespace Behaviac.Design
         private bool IsPrefabBehavior(string filename)
         {
             if (string.IsNullOrEmpty(filename))
+            {
                 return false;
+            }
 
             TreeNode behaviors = GetBehaviorGroup(treeView.Nodes, _prefabGroupName, GetPrefabFolder());
             TreeNode node = GetBehaviorNode(behaviors, filename, true);
@@ -449,7 +458,9 @@ namespace Behaviac.Design
             {
                 // we skip hidden and system folders
                 if ((File.GetAttributes(subfolder) & (FileAttributes.Hidden | FileAttributes.System)) != 0)
+                {
                     continue;
+                }
 
                 // create a group node for the the current folder
                 string nodeLabel = new DirectoryInfo(subfolder).Name;
@@ -468,7 +479,7 @@ namespace Behaviac.Design
                 bool hasFileManger = false;
                 foreach (FileManagerInfo fileman in fileManagers)
                 {
-                    if (file.ToLowerInvariant().EndsWith(fileman.FileExtension))
+                    if (file.ToLowerInvariant().EndsWith(fileman.FileExtension) && !file.ToLowerInvariant().EndsWith(".bb.xml"))
                     {
                         hasFileManger = true;
                         break;
@@ -477,11 +488,15 @@ namespace Behaviac.Design
 
                 // if there is no filemanager for this file, we skip it
                 if (!hasFileManger)
+                {
                     continue;
+                }
 
                 // we skip hidden and system files
                 if ((File.GetAttributes(file) & (FileAttributes.Hidden | FileAttributes.System)) != 0)
+                {
                     continue;
+                }
 
                 // create a tree node for the file
                 string nodeLabel = Path.GetFileNameWithoutExtension(file);
@@ -495,13 +510,21 @@ namespace Behaviac.Design
         internal string GetPrefabFolder()
         {
             if (string.IsNullOrEmpty(_behaviorFolder))
+            {
                 return string.Empty;
+            }
 
             string folder = Directory.GetParent(_behaviorFolder).FullName;
             string prefabFolder = Path.Combine(folder, _prefabGroupName);
 
+            // This is a patch for the Chinese filename of the prefabs.
             if (!Directory.Exists(prefabFolder))
-                prefabFolder = Path.Combine(folder, "Prefabs");
+            {
+                string prefabGroup = Plugin.GetResourceString("PrefabGroupName");
+                prefabGroup = Path.Combine(folder, prefabGroup);
+                if (Directory.Exists(prefabGroup))
+                    prefabFolder = prefabGroup;
+            }
 
             return prefabFolder;
         }
@@ -513,11 +536,15 @@ namespace Behaviac.Design
         {
             // check if we have a valid folder
             if (string.IsNullOrEmpty(_behaviorFolder))
+            {
                 return;
+            }
 
             // create the folder if it does not exist
             if (!Directory.Exists(_behaviorFolder))
+            {
                 Directory.CreateDirectory(_behaviorFolder);
+            }
 
             // get the group for the behavior and clear it from the old ones.
             TreeNode behaviorTreeNode = GetBehaviorGroup(treeView.Nodes, _behaviorGroupName, _behaviorFolder);
@@ -529,6 +556,7 @@ namespace Behaviac.Design
 
             // get the group for the prefab and clear it from the old ones.
             string prefabFolder = GetPrefabFolder();
+
             if (Directory.Exists(prefabFolder))
             {
                 TreeNode prefabTreeNode = GetPrefabGroup(treeView.Nodes, _prefabGroupName, prefabFolder);
@@ -545,10 +573,13 @@ namespace Behaviac.Design
             foreach (BehaviorNode behavior in this.GetAllOpenedBehaviors())
             {
                 if (behavior.IsModified)
-                    ((Node)behavior).BehaviorWasModified();
+                {
+                    behavior.TriggerWasModified(behavior as Node);
+                }
             }
 
             treeView.SelectedNode = null;
+
             if (treeView.GetNodeCount(false) > 0)
             {
                 treeView.SelectedNode = treeView.Nodes[0];
@@ -582,7 +613,9 @@ namespace Behaviac.Design
             foreach (TreeNode node in pool)
             {
                 if (((NodeTag)node.Tag).Type == type)
+                {
                     list.Add(node);
+                }
 
                 AddChildNodes(node.Nodes, list, type);
             }
@@ -607,13 +640,13 @@ namespace Behaviac.Design
             if (nodes.Count < 1)
             {
                 used = i;
-                return string.Format("{0} {1}", label, i);
+                return string.Format("{0}_{1}", label, i);
             }
 
             do
             {
                 // generate the new label
-                string newlabel = string.Format("{0} {1}", label, i);
+                string newlabel = string.Format("{0}_{1}", label, i);
 
                 // check if there is any node with this name
                 bool found = false;
@@ -634,8 +667,7 @@ namespace Behaviac.Design
                 }
 
                 i++;
-            }
-            while (true);
+            } while (true);
         }
 
         public delegate BehaviorTreeViewDock ShowBehaviorEventDelegate(Nodes.BehaviorNode node);
@@ -655,14 +687,18 @@ namespace Behaviac.Design
             foreach (BehaviorNode node in _loadedBehaviors)
             {
                 if (node.Filename == filename)
+                {
                     return node;
+                }
             }
 
             // search if we have any newly created behavior with a matching name
             foreach (BehaviorNode node in _newBehaviors)
             {
                 if (node.Filename == filename)
+                {
                     return node;
+                }
             }
 
             return null;
@@ -674,11 +710,14 @@ namespace Behaviac.Design
         /// <param name="nodetag">The NodeTag of the tree node.</param>
         /// <param name="label">The label of the tree node.</param>
         /// <returns>Returns null if no matching behavior could be found or loaded.</returns>
-        internal BehaviorNode GetBehavior(NodeTag nodetag, string label)
+        internal BehaviorNode GetBehavior(NodeTag nodetag, string label, List<Nodes.Node.ErrorCheck> result = null)
         {
-            BehaviorNode behavior = LoadBehavior(nodetag.Filename);
+            BehaviorNode behavior = LoadBehavior(nodetag.Filename, false, result);
+
             if (behavior != null)
+            {
                 return behavior;
+            }
 
             MessageBox.Show(string.Format(Resources.NoBehaviorInfo, label, nodetag.Filename), Resources.FileError, MessageBoxButtons.OK);
             return null;
@@ -694,33 +733,51 @@ namespace Behaviac.Design
         private TreeNode GetTreeNode(BehaviorNode behavior)
         {
             if (behavior.FileManager == null)
+            {
                 return GetBehaviorNode(((Node)behavior).Label, false);
+            }
 
             return GetBehaviorNode(behavior.Filename, true);
         }
 
         private void CheckNode(BehaviorNode behavior, TreeNode tnode)
         {
-            List<Node.ErrorCheck> result = new List<Node.ErrorCheck>();
-            ((Behavior)behavior).CheckForErrors(behavior, result);
-
-            if (tnode != null)
+            if (Plugin.EditMode == EditModes.Design)
             {
-                tnode.ForeColor = (Plugin.GetErrorChecks(result).Count > 0) ? SystemColors.HotTrack : SystemColors.HighlightText;
+                List<Node.ErrorCheck> result = new List<Node.ErrorCheck>();
+                ((Behavior)behavior).CheckForErrors(behavior, result);
+
+                if (tnode != null)
+                {
+                    tnode.ForeColor = (Plugin.GetErrorChecks(result).Count > 0) ? SystemColors.HotTrack : SystemColors.HighlightText;
+                }
             }
         }
+
+        private static List<string> metaCheckedWorkspaces = new List<string>();
 
         /// <summary>
         /// Loads the given behavior. If the behavior was already loaded, it is not loaded a second time.
         /// </summary>
         /// <param name="filename">Behaviour file to load.</param>
         /// <returns>Returns null if the behavior was not already loaded and could not be loaded.</returns>
-        public BehaviorNode LoadBehavior(string filename, bool bForce = false)
+        public BehaviorNode LoadBehavior(string filename, bool bForce = false, List<Nodes.Node.ErrorCheck> result = null)
         {
             // check if the behavior was already loaded.
             BehaviorNode behavior = GetBehavior(filename);
+
             if (behavior == null || bForce)
             {
+                if (!metaCheckedWorkspaces.Contains(Workspace.Current.FileName))
+                {
+                    metaCheckedWorkspaces.Add(Workspace.Current.FileName);
+
+                    if (Plugin.AgentTypes.Count <= 1)
+                    {
+                        MessageBox.Show(Resources.EmptyMetaWarning, Resources.Warning, MessageBoxButtons.OK);
+                    }
+                }
+
                 FileManagers.FileManager filemanager = null;
 
                 // search the file managers for the right one to load the given file
@@ -733,16 +790,21 @@ namespace Behaviac.Design
                         {
                             // check if the file exists
                             if (!File.Exists(filename))
+                            {
                                 throw new Exception(string.Format(Resources.ExceptionNoSuchFile, filename));
+                            }
 
                             // create a new file manager and load the behavior
                             filemanager = info.Create(filename, null);
-                            filemanager.Load(RegisterLoadedBehaviorNode);
+                            filemanager.Load(result, RegisterLoadedBehaviorNode);
                             behavior = filemanager.Behavior;
+
+                            if (behavior == null)
+                                continue;
 
                             // register the WasSaved and WasModified events on the behavior
                             behavior.WasSaved += behavior_WasSaved;
-                            ((Node)behavior).WasModified += behavior_WasModified;
+                            behavior.WasModified += behavior_WasModified;
 
                             // assign the label of the behavior node
                             ((Node)behavior).Label = Path.GetFileNameWithoutExtension(filename);
@@ -759,6 +821,7 @@ namespace Behaviac.Design
                                 {
                                     tnode.ImageIndex = (int)NodeIcon.Prefab;
                                     tnode.SelectedImageIndex = (int)NodeIcon.Prefab;
+
                                 }
                                 else
                                 {
@@ -772,18 +835,20 @@ namespace Behaviac.Design
                             //in behavior xml file, some node types might have been removed and IsModified is set to true in loading
                             if (behavior.IsModified)
                             {
-                                ((Node)behavior).BehaviorWasModified();
+                                behavior.TriggerWasModified(behavior as Node);
                             }
 
                             if (!bForce)
                             {
                                 UndoManager.Save(behavior);
                             }
+
                         }
                         catch (Exception ex)
                         {
                             MessageBox.Show(ex.Message, Resources.LoadError, MessageBoxButtons.OK);
                         }
+
                         break;
                     }
                 }
@@ -813,7 +878,7 @@ namespace Behaviac.Design
             {
                 if (node.Filename == filename)
                 {
-                    UndoManager.Clear(node);
+                    UndoManager.Clear(node.Filename);
                     _loadedBehaviors.Remove(node);
                     return true;
                 }
@@ -823,7 +888,7 @@ namespace Behaviac.Design
             {
                 if (node.Filename == filename)
                 {
-                    UndoManager.Clear(node);
+                    UndoManager.Clear(node.Filename);
                     _newBehaviors.Remove(node);
                     return true;
                 }
@@ -832,19 +897,53 @@ namespace Behaviac.Design
             return false;
         }
 
-        private BehaviorNode getBehaviorByTreeNode(TreeNode node)
+        private BehaviorNode getBehaviorByTreeNode(TreeNode node, List<Nodes.Node.ErrorCheck> result = null)
         {
             BehaviorNode behavior = null;
+
             if (node != null)
             {
                 NodeTag nodetag = (NodeTag)node.Tag;
+
                 if (nodetag.Type == NodeTagType.Behavior || nodetag.Type == NodeTagType.Prefab)
                 {
-                    behavior = GetBehavior(nodetag, node.Text);
+                    behavior = GetBehavior(nodetag, node.Text, result);
                 }
             }
 
             return behavior;
+        }
+
+        private static ErrorCheckDialog _errorDialog = null;
+
+        public void OpenBehavior(TreeNode treenode, bool bShow)
+        {
+            if (treenode == null)
+                return;
+
+            List<Nodes.Node.ErrorCheck> result = new List<Node.ErrorCheck>();
+            BehaviorNode behavior = getBehaviorByTreeNode(treenode, result);
+
+            if (behavior != null)
+            {
+                if (bShow && ShowBehavior != null)
+                    ShowBehavior(behavior);
+
+                CheckNode(behavior, GetTreeNode(behavior));
+
+                if (result.Count > 0 && BehaviorTreeViewDock.LastFocused != null)
+                {
+                    UIUtilities.ShowErrorDialog(ref _errorDialog, this, BehaviorTreeViewDock.LastFocused.BehaviorTreeView,
+                        this.ParentForm, Resources.LoadError, result);
+                }
+
+                Utilities.ReportLoadBehavior();
+            }
+        }
+
+        private void treeView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            OpenBehavior(e.Node, false);
         }
 
         /// <summary>
@@ -852,12 +951,7 @@ namespace Behaviac.Design
         /// </summary>
         private void behaviorTreeView_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
         {
-            BehaviorNode behavior = getBehaviorByTreeNode(e.Node);
-            if (behavior != null && ShowBehavior != null)
-            {
-                CheckNode(behavior, GetTreeNode(behavior));
-                ShowBehavior(behavior);
-            }
+            OpenBehavior(e.Node, true);
         }
 
         /// <summary>
@@ -868,13 +962,13 @@ namespace Behaviac.Design
         public void NewBehavior()
         {
             // create a new behavior node with a unique label
-            string label = GetUniqueLabel(Plugin.GetResourceString("NewBehavior"), _lastNewBehavior, out _lastNewBehavior);
+            string label = GetUniqueLabel("NewBehavior", _lastNewBehavior, out _lastNewBehavior);
             BehaviorNode behavior = Node.CreateBehaviorNode(label);
-            behavior.IsModified = true;
+            behavior.TriggerWasModified(behavior as Node);
 
             // get updated when the behavior changes
             behavior.WasSaved += behavior_WasSaved;
-            ((Node)behavior).WasModified += behavior_WasModified;
+            behavior.WasModified += behavior_WasModified;
 
             // mark behavior as being modified
             behavior.FileManager = null;
@@ -884,18 +978,27 @@ namespace Behaviac.Design
 
             // get the folder node for the new node.
             TreeNode folder = null;
+
             if (treeView.SelectedNode != null)
             {
                 NodeTag nodetag = (NodeTag)treeView.SelectedNode.Tag;
+
                 if (nodetag.Type == NodeTagType.Behavior || nodetag.Type == NodeTagType.BehaviorFolder)
+                {
                     folder = (nodetag.Type == NodeTagType.BehaviorFolder) ? treeView.SelectedNode : treeView.SelectedNode.Parent;
+                }
+
                 else if (nodetag.Type == NodeTagType.Prefab || nodetag.Type == NodeTagType.PrefabFolder)
+                {
                     folder = (nodetag.Type == NodeTagType.PrefabFolder) ? treeView.SelectedNode : treeView.SelectedNode.Parent;
+                }
             }
 
             // if the selected node can not be found, use the root folder defaultly.
             if (folder == null)
+            {
                 folder = GetBehaviorGroup(treeView.Nodes, _behaviorGroupName, _behaviorFolder);
+            }
 
             // set the folder of the node.
             behavior.Folder = ((NodeTag)folder.Tag).Filename;
@@ -915,13 +1018,17 @@ namespace Behaviac.Design
             TreeNode newNode = new TreeNode(((Node)behavior).Label, (int)NodeIcon.BehaviorModified, (int)NodeIcon.BehaviorModified);
             newNode.Tag = new NodeTag(nodeTagType, behavior.GetType(), filename);
 
+            ((NodeTag)(newNode.Tag)).AssignLoadedBehavior(behavior);
+
             // add the new node to the folder node, and select it.
             folder.Nodes.Add(newNode);
             treeView.SelectedNode = newNode;
 
             // trigger the ShowBehavior event
             if (ShowBehavior != null)
+            {
                 ShowBehavior(behavior);
+            }
 
             Focus();
 
@@ -929,6 +1036,46 @@ namespace Behaviac.Design
             treeView.SelectedNode.BeginEdit();
 
             UndoManager.Save(behavior);
+        }
+
+        private TreeNode FindTreeNodeByName(TreeNodeCollection nodes, string filename)
+        {
+            foreach (TreeNode node in nodes)
+            {
+                NodeTag nodetag = (NodeTag)node.Tag;
+                if (nodetag.Filename == filename)
+                {
+                    return node;
+                }
+
+                TreeNode findNode = FindTreeNodeByName(node.Nodes, filename);
+                if (findNode != null)
+                {
+                    return findNode;
+                }
+            }
+
+            return null;
+        }
+
+        public void ShowBehaviorTreeNode(string filename)
+        {
+            TreeNode node = FindTreeNodeByName(treeView.Nodes, filename);
+            if (node != null)
+            {
+                TreeNode parent = node.Parent;
+                while (parent != null)
+                {
+                    parent.Expand();
+                    parent = parent.Parent;
+                }
+
+                treeView.SelectedNode = node;
+                node.EnsureVisible();
+
+                treeView.Focus();
+                treeView.Select();
+            }
         }
 
         /// <summary>
@@ -992,8 +1139,11 @@ namespace Behaviac.Design
 
                 // add any modified behavior to that list as well
                 foreach (BehaviorNode node in _loadedBehaviors)
+
                     if (node.IsModified)
+                    {
                         behaviorsToSave.Add(node);
+                    }
 
                 // clear all of the behaviors
                 bool error;
@@ -1015,7 +1165,9 @@ namespace Behaviac.Design
         private void treeView_ItemDrag(object sender, ItemDragEventArgs e)
         {
             if (e.Button == MouseButtons.Right || Plugin.EditMode != EditModes.Design)
+            {
                 return;
+            }
 
             TreeNode node = (TreeNode)e.Item;
             NodeTag nodetag = (NodeTag)node.Tag;
@@ -1055,9 +1207,9 @@ namespace Behaviac.Design
                 // on another behavior or folder, we continue
                 if (targetNode.TreeView == sourceNode.TreeView &&
                     ((sourceNodeTag.Type == NodeTagType.Behavior || (sourceNodeTag.Type == NodeTagType.BehaviorFolder && sourceNode.Parent != null)) &&
-                    (targetNodeTag.Type == NodeTagType.Behavior || targetNodeTag.Type == NodeTagType.BehaviorFolder) ||
-                    (sourceNodeTag.Type == NodeTagType.Prefab || (sourceNodeTag.Type == NodeTagType.PrefabFolder && sourceNode.Parent != null)) &&
-                    (targetNodeTag.Type == NodeTagType.Prefab || targetNodeTag.Type == NodeTagType.PrefabFolder)))
+                     (targetNodeTag.Type == NodeTagType.Behavior || targetNodeTag.Type == NodeTagType.BehaviorFolder) ||
+                     (sourceNodeTag.Type == NodeTagType.Prefab || (sourceNodeTag.Type == NodeTagType.PrefabFolder && sourceNode.Parent != null)) &&
+                     (targetNodeTag.Type == NodeTagType.Prefab || targetNodeTag.Type == NodeTagType.PrefabFolder)))
                 {
                     // if we dropped on a behavior, we use its parent instead
                     if (targetNodeTag.Type == NodeTagType.Behavior || targetNodeTag.Type == NodeTagType.Prefab)
@@ -1080,8 +1232,9 @@ namespace Behaviac.Design
                             if (sourceNodeTag.Type == NodeTagType.Prefab || sourceNodeTag.Type == NodeTagType.PrefabFolder)
                             {
                                 string msgInfo = sourceNodeTag.Type == NodeTagType.Prefab ? "The instances of the dragged prefab will be re-linked. Are you sure?"
-                                    : "The instances of the prefabs in the dragged folder will be re-linked. Are you sure?";
+                                                 : "The instances of the prefabs in the dragged folder will be re-linked. Are you sure?";
                                 DialogResult result = MessageBox.Show(msgInfo, Resources.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+
                                 if (result == DialogResult.Cancel)
                                 {
                                     return;
@@ -1102,8 +1255,11 @@ namespace Behaviac.Design
 
                                 // and update its file manager
                                 BehaviorNode node = GetBehavior(sourceNodeTag.Filename);
+
                                 if (node != null)
+                                {
                                     node.Filename = targetfile;
+                                }
 
                                 // update the tree node's filename
                                 sourceNodeTag.Filename = targetfile;
@@ -1115,6 +1271,7 @@ namespace Behaviac.Design
 
                                 // sort the tree
                                 targetNode.TreeView.Sort();
+
                             }
                             else
                             {
@@ -1136,7 +1293,9 @@ namespace Behaviac.Design
                                 foreach (BehaviorNode node in _loadedBehaviors)
                                 {
                                     if (node.Filename.StartsWith(sourceNodeTag.Filename + '\\'))
+                                    {
                                         node.Filename = targetfile + node.Filename.Substring(sourceNodeTag.Filename.Length);
+                                    }
                                 }
 
                                 // rebuild the behavior list to update the tree nodes
@@ -1144,6 +1303,7 @@ namespace Behaviac.Design
                             }
 
                             Debug.Check(oldPrefabNames.Count == newPrefabNames.Count);
+
                             for (int i = 0; i < oldPrefabNames.Count; ++i)
                             {
                                 string oldPrefabName = FileManagers.FileManager.GetRelativePath(oldPrefabNames[i]);
@@ -1154,17 +1314,16 @@ namespace Behaviac.Design
                                     foreach (BehaviorNode behavior in this.GetAllBehaviors())
                                     {
                                         bool resetName = ((Node)behavior).SetPrefab(newPrefabName, false, oldPrefabName);
+
                                         if (resetName)
                                         {
                                             UndoManager.Save(behavior);
-
-                                            if (behavior.IsModified)
-                                                ((Node)behavior).BehaviorWasModified();
                                         }
                                     }
                                 }
                             }
                         }
+
                     }
                     catch (Exception ex)
                     {
@@ -1191,6 +1350,7 @@ namespace Behaviac.Design
                 // get the tree node we are over
                 Point pt = view.PointToClient(new Point(e.X, e.Y));
                 TreeNode targetNode = view.GetNodeAt(pt);
+
                 if (targetNode != null)
                 {
                     NodeTag targetNodeTag = (NodeTag)targetNode.Tag;
@@ -1203,16 +1363,18 @@ namespace Behaviac.Design
                     // on another behavior or folder, we continue
                     if (targetNode.TreeView == sourceNode.TreeView &&
                         ((sourceNodeTag.Type == NodeTagType.Behavior || (sourceNodeTag.Type == NodeTagType.BehaviorFolder && sourceNode.Parent != null)) &&
-                        (targetNodeTag.Type == NodeTagType.Behavior || targetNodeTag.Type == NodeTagType.BehaviorFolder) ||
-                        (sourceNodeTag.Type == NodeTagType.Prefab || (sourceNodeTag.Type == NodeTagType.PrefabFolder && sourceNode.Parent != null)) &&
-                        (targetNodeTag.Type == NodeTagType.Prefab || targetNodeTag.Type == NodeTagType.PrefabFolder)))
+                         (targetNodeTag.Type == NodeTagType.Behavior || targetNodeTag.Type == NodeTagType.BehaviorFolder) ||
+                         (sourceNodeTag.Type == NodeTagType.Prefab || (sourceNodeTag.Type == NodeTagType.PrefabFolder && sourceNode.Parent != null)) &&
+                         (targetNodeTag.Type == NodeTagType.Prefab || targetNodeTag.Type == NodeTagType.PrefabFolder)))
                     {
                         // if the target is a behavior, use its folder instead
                         if (targetNodeTag.Type == NodeTagType.Behavior || targetNodeTag.Type == NodeTagType.Prefab)
+                        {
                             targetNode = targetNode.Parent;
+                        }
 
                         // update the selected node and expand it so you can drag an item into a collapsed sub folder
-                        targetNode.TreeView.SelectedNode = targetNode;
+                        //targetNode.TreeView.SelectedNode = targetNode;
                         targetNode.Expand();
                         e.Effect = DragDropEffects.Move;
                     }
@@ -1233,8 +1395,7 @@ namespace Behaviac.Design
                 filename = (index >= 0) ? Path.Combine(dir, file + "_" + index) : Path.Combine(dir, file);
                 filename = Path.ChangeExtension(filename, ext);
                 ++index;
-            }
-            while (File.Exists(filename));
+            } while (File.Exists(filename));
 
             return filename;
         }
@@ -1249,7 +1410,9 @@ namespace Behaviac.Design
         public FileManagers.SaveResult SaveBehavior(BehaviorNode node, bool saveas, bool showNode = true)
         {
             if (ShowBehavior == null)
+            {
                 throw new Exception("Missing event handler ShowBehavior");
+            }
 
             try
             {
@@ -1260,6 +1423,7 @@ namespace Behaviac.Design
 
                 BehaviorTreeViewDock dock = null;
                 BehaviorNode rootNode = node;
+
                 if (showNode)
                 {
                     // show the behavior we want to save
@@ -1268,6 +1432,8 @@ namespace Behaviac.Design
                     // check if we need to show the save dialogue
                     rootNode = dock.BehaviorTreeView.RootNode;
                 }
+
+                rootNode.PreSave();
 
                 if (rootNode.FileManager == null || saveas)
                 {
@@ -1279,6 +1445,7 @@ namespace Behaviac.Design
                     if (rootNode.FileManager != null && saveas)
                     {
                         filename = rootNode.Filename;
+
                     }
                     else
                     {
@@ -1287,7 +1454,14 @@ namespace Behaviac.Design
                         filename = Path.ChangeExtension(filename, _fileManagers[0].FileExtension);
                     }
 
+                    // the file is new if it has no file manager
+                    bool isNew = (rootNode.FileManager == null);
+
+                    if (isNew)
+                        saveas = false;
+
                     bool isValidFile = Path.IsPathRooted(filename);
+
                     if (saveas || !isValidFile)
                     {
                         // Choose a valid file name.
@@ -1298,6 +1472,7 @@ namespace Behaviac.Design
 
                             // show the save dialogue
                             isValidFile = (saveAsDialog.ShowDialog() == DialogResult.OK);
+
                             if (isValidFile)
                             {
                                 filename = saveAsDialog.FileName;
@@ -1310,13 +1485,13 @@ namespace Behaviac.Design
                         // make sure we have the absolute filename
                         Debug.Check(Path.IsPathRooted(filename));
 
-                        // the file is new if it has no file manager
-                        bool isNew = (rootNode.FileManager == null);
-
                         // create the selected file manager
                         FileManagers.FileManager fm = _fileManagers[0].Create(filename, saveas ? (BehaviorNode)rootNode.Clone() : rootNode);
+
                         if (fm == null)
+                        {
                             throw new Exception("Could not create file manager");
+                        }
 
                         if (isNew)
                         {
@@ -1326,16 +1501,22 @@ namespace Behaviac.Design
 
                         // update the view so we get the new label
                         if (dock != null)
+                        {
                             dock.BehaviorTreeView.Invalidate();
+                        }
 
                         // save the behavior
                         fm.Save();
+
+                        rootNode.PostSave();
 
                         // if the behavior was new, remove it from the list of new behaviors to the loaded ones
                         if (isNew)
                         {
                             if (_newBehaviors.Remove(rootNode))
+                            {
                                 _loadedBehaviors.Add(rootNode);
+                            }
                         }
 
                         if (saveas)
@@ -1344,32 +1525,45 @@ namespace Behaviac.Design
                             RebuildBehaviorList();
 
                             UIUtilities.ShowBehaviorTree(filename);
+
+                            ShowBehaviorTreeNode(rootNode.Filename);
                         }
+
                     }
                     else
                     {
                         // the user aborted
                         return FileManagers.SaveResult.Cancelled;
                     }
+
                 }
                 else
                 {
                     // simply save the behavior using the existing file manager
                     FileManagers.SaveResult saveResult = rootNode.FileManager.Save();
+
+                    rootNode.PostSave();
+
                     if (FileManagers.SaveResult.Succeeded != saveResult)
+                    {
                         return saveResult;
+                    }
                 }
 
                 CheckNode(rootNode, GetTreeNode(rootNode));
 
                 // if we were showing a different behavior before, return to it
                 if (showNode && currNode != null)
+                {
                     ShowBehavior(currNode);
+                }
             }
+
             finally
             {
                 MainWindow.Instance.EnableFileWatcher(true);
             }
+
             return FileManagers.SaveResult.Succeeded;
         }
 
@@ -1387,6 +1581,7 @@ namespace Behaviac.Design
                 if (nodetag.Type == NodeTagType.Behavior || nodetag.Type == NodeTagType.Prefab)
                 {
                     filenames.Add(nodetag.Filename);
+
                 }
                 else if (nodetag.Type == NodeTagType.BehaviorFolder || nodetag.Type == NodeTagType.PrefabFolder)
                 {
@@ -1405,7 +1600,7 @@ namespace Behaviac.Design
 
             GetAllBehaviorNames(GetBehaviorGroup(treeView.Nodes, _behaviorGroupName, _behaviorFolder).Nodes, ref filenames);
             GetAllBehaviorNames(GetBehaviorGroup(treeView.Nodes, _prefabGroupName, GetPrefabFolder()).Nodes, ref filenames);
-            
+
             return filenames.AsReadOnly();
         }
 
@@ -1416,8 +1611,11 @@ namespace Behaviac.Design
             foreach (string filename in this.GetAllBehaviorNames())
             {
                 Nodes.BehaviorNode behavior = this.LoadBehavior(filename);
+
                 if (behavior != null)
+                {
                     behaviors.Add(behavior);
+                }
             }
 
             return behaviors.AsReadOnly();
@@ -1437,6 +1635,7 @@ namespace Behaviac.Design
                 nodetag.Type == NodeTagType.PrefabFolder && e.Node.Parent == null)
             {
                 e.CancelEdit = true;
+
             }
             else
             {
@@ -1444,7 +1643,9 @@ namespace Behaviac.Design
                 if (string.IsNullOrEmpty(nodetag.Filename) ||
                     (nodetag.Type == NodeTagType.Behavior || nodetag.Type == NodeTagType.Prefab) &&
                     !Path.IsPathRooted(nodetag.Filename))
+                {
                     e.CancelEdit = true;
+                }
             }
         }
 
@@ -1464,6 +1665,7 @@ namespace Behaviac.Design
 
             // trim unrequired characters and check if the label is still valid
             string label = e.Label.Trim();
+
             if (label.Length < 1 || (nodetag.Type == NodeTagType.Behavior && !Plugin.IsValidFilename(label)))
             {
                 if (label.Length > 0)
@@ -1478,8 +1680,9 @@ namespace Behaviac.Design
             if (nodetag.Type == NodeTagType.Prefab || nodetag.Type == NodeTagType.PrefabFolder)
             {
                 string msgInfo = nodetag.Type == NodeTagType.Prefab ? "The instances of the selected prefab will be re-linked. Are you sure?"
-                    : "The instances of the prefabs in the selected folder will be re-linked. Are you sure?";
+                                 : "The instances of the prefabs in the selected folder will be re-linked. Are you sure?";
                 DialogResult result = MessageBox.Show(msgInfo, Resources.Warning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+
                 if (result == DialogResult.Cancel)
                 {
                     e.CancelEdit = true;
@@ -1511,7 +1714,9 @@ namespace Behaviac.Design
 
                     // move the file
                     if (File.Exists(nodetag.Filename))
+                    {
                         File.Move(nodetag.Filename, targetfile);
+                    }
 
                     if (nodetag.Type == NodeTagType.Prefab)
                     {
@@ -1520,25 +1725,39 @@ namespace Behaviac.Design
                     }
 
                     BehaviorNode node = GetBehavior(nodetag.Filename);
+
                     if (node != null)
                     {
                         // update the node's label and its file manager
                         ((Node)node).Label = label;
-                        node.Filename = targetfile;
+
+                        if (node.Filename != targetfile)
+                        {
+                            UndoManager.Clear(node.Filename);
+
+                            node.Filename = targetfile;
+
+                            UndoManager.Save(node);
+                        }
 
                         // if the behavior is shown it needs to be updated because of the label
                         if (BehaviorTreeViewDock.LastFocused != null)
+                        {
                             BehaviorTreeViewDock.LastFocused.Invalidate();
+                        }
 
                         // triggered the behavior renamed events
                         node.TriggerWasRenamed();
 
                         if (BehaviorRenamed != null)
+                        {
                             BehaviorRenamed(node);
+                        }
                     }
 
                     // update the filename in the node tag
                     nodetag.Filename = targetfile;
+
                 }
                 else
                 {
@@ -1576,7 +1795,9 @@ namespace Behaviac.Design
                             node.TriggerWasRenamed();
 
                             if (BehaviorRenamed != null)
+                            {
                                 BehaviorRenamed(node);
+                            }
                         }
                     }
 
@@ -1587,6 +1808,7 @@ namespace Behaviac.Design
                 }
 
                 Debug.Check(oldPrefabNames.Count == newPrefabNames.Count);
+
                 for (int i = 0; i < oldPrefabNames.Count; ++i)
                 {
                     string oldPrefabName = FileManagers.FileManager.GetRelativePath(oldPrefabNames[i]);
@@ -1597,16 +1819,15 @@ namespace Behaviac.Design
                         foreach (BehaviorNode behavior in this.GetAllBehaviors())
                         {
                             bool resetName = ((Node)behavior).SetPrefab(newPrefabName, false, oldPrefabName);
+
                             if (resetName)
                             {
                                 UndoManager.Save(behavior);
-
-                                if (behavior.IsModified)
-                                    ((Node)behavior).BehaviorWasModified();
                             }
                         }
                     }
                 }
+
             }
             catch (Exception ex)
             {
@@ -1623,13 +1844,18 @@ namespace Behaviac.Design
         {
             // if no tree node is selected we do not know where to create the new folder
             if (treeView.SelectedNode == null)
+            {
                 return;
+            }
 
             // we can only create folders for behaviors and folders
             NodeTag nodetag = (NodeTag)treeView.SelectedNode.Tag;
+
             if (nodetag.Type != NodeTagType.Behavior && nodetag.Type != NodeTagType.BehaviorFolder &&
                 nodetag.Type != NodeTagType.Prefab && nodetag.Type != NodeTagType.PrefabFolder)
+            {
                 return;
+            }
 
             try
             {
@@ -1657,6 +1883,7 @@ namespace Behaviac.Design
 
                 // allow the user to define a custom name
                 newnode.BeginEdit();
+
             }
             catch (Exception ex)
             {
@@ -1685,6 +1912,7 @@ namespace Behaviac.Design
             {
                 treeView.SelectedNode.BeginEdit();
             }
+
             // delete the current tree node
             else if (e.KeyCode == Keys.Delete)
             {
@@ -1702,25 +1930,34 @@ namespace Behaviac.Design
         {
             // if no tree node is selected we have nothing to delete
             if (treeView.SelectedNode == null)
+            {
                 return;
+            }
 
             // we may only delete behaviors, prefabs and folders.
             NodeTag nodetag = (NodeTag)treeView.SelectedNode.Tag;
+
             if (nodetag.Type != NodeTagType.Behavior && nodetag.Type != NodeTagType.BehaviorFolder &&
                 nodetag.Type != NodeTagType.Prefab && nodetag.Type != NodeTagType.PrefabFolder)
+            {
                 return;
+            }
 
             bool isFolder = nodetag.Type == NodeTagType.BehaviorFolder || nodetag.Type == NodeTagType.PrefabFolder;
             string warningInfo = string.Format(isFolder ? Resources.DeleteFolderWarningInfo : Resources.DeleteWarningInfo, treeView.SelectedNode.Text);
+
             if (nodetag.Type == NodeTagType.Prefab || nodetag.Type == NodeTagType.PrefabFolder)
             {
                 warningInfo = isFolder ? "All prefabs in the selected folder will be deleted, and the link with their instances will be broken, which is not undoable. Are you sure?"
-                    : "The selected prefab will be deleted, and the link with its instances will be broken, which is not undoable. Are you sure?";
+                              : "The selected prefab will be deleted, and the link with its instances will be broken, which is not undoable. Are you sure?";
             }
 
             DialogResult dr = MessageBox.Show(warningInfo, Resources.DeleteWarning, MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+
             if (dr == DialogResult.Cancel)
+            {
                 return;
+            }
 
             // the list of the behaviors deleted
             List<BehaviorNode> behaviors = new List<BehaviorNode>();
@@ -1733,11 +1970,17 @@ namespace Behaviac.Design
                 if (nodetag.Type == NodeTagType.Behavior || nodetag.Type == NodeTagType.Prefab)
                 {
                     BehaviorNode node = GetBehavior(nodetag, treeView.SelectedNode.Text);
+
                     if (node != null)
+                    {
                         behaviors.Add(node);
+                    }
 
                     if (nodetag.Type == NodeTagType.Prefab)
+                    {
                         prefabFiles.Add(nodetag.Filename);
+                    }
+
                 }
                 else
                 {
@@ -1745,16 +1988,21 @@ namespace Behaviac.Design
                     foreach (BehaviorNode node in _loadedBehaviors)
                     {
                         if (node.Filename.StartsWith(nodetag.Filename + '\\'))
+                        {
                             behaviors.Add(node);
+                        }
                     }
 
                     if (nodetag.Type == NodeTagType.PrefabFolder)
+                    {
                         GetAllBehaviorNames(treeView.SelectedNode.Nodes, ref prefabFiles);
+                    }
                 }
 
                 foreach (string prefabFile in prefabFiles)
                 {
                     Nodes.BehaviorNode prefabBehavior = this.LoadBehavior(prefabFile);
+
                     if (prefabBehavior != null)
                     {
                         string prefabName = FileManagers.FileManager.GetRelativePath(prefabFile);
@@ -1768,6 +2016,7 @@ namespace Behaviac.Design
 
                 // close all behaviors which we want to delete
                 bool error = false;
+
                 if (ClearBehaviors != null)
                 {
                     bool[] result;
@@ -1781,11 +2030,16 @@ namespace Behaviac.Design
                         {
                             // remove the behavior from the correct list
                             if (behaviors[i].FileManager == null || behaviors[i].Filename == string.Empty)
+                            {
                                 _newBehaviors.Remove(behaviors[i]);
-                            else
-                                _loadedBehaviors.Remove(behaviors[i]);
+                            }
 
-                            UndoManager.Clear(behaviors[i]);
+                            else
+                            {
+                                _loadedBehaviors.Remove(behaviors[i]);
+                            }
+
+                            UndoManager.Clear(behaviors[i].Filename);
                         }
                     }
                 }
@@ -1798,11 +2052,17 @@ namespace Behaviac.Design
                     if (!string.IsNullOrEmpty(nodetag.Filename))
                     {
                         if (File.Exists(nodetag.Filename))
+                        {
                             Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(nodetag.Filename, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                        }
+
                         else if (Directory.Exists(nodetag.Filename))
+                        {
                             Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory(nodetag.Filename, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                        }
                     }
                 }
+
             }
             catch (Exception ex)
             {
@@ -1817,19 +2077,15 @@ namespace Behaviac.Design
         /// Handles when a behavior was modified.
         /// </summary>
         /// <param name="node">The node that was modified.</param>
-        private void behavior_WasModified(Node node)
+        private void behavior_WasModified(BehaviorNode behavior, Node node)
         {
-            // check if the node modified was a behavior
-            if (!(node is BehaviorNode))
-                return;
-
-            BehaviorNode behavior = (BehaviorNode)node;
-
             // get the correct tree node
             TreeNode tnode = null;
+
             if (behavior.FileManager == null)
             {
                 tnode = GetBehaviorNode(((Node)behavior).Label, false);
+
             }
             else
             {
@@ -1852,17 +2108,22 @@ namespace Behaviac.Design
         {
             // if the file manager is null the file could not be saved
             if (node.FileManager == null || string.IsNullOrEmpty(node.Filename))
+            {
                 return;
+            }
 
             // update the behaviors icon to the not-modified one
             TreeNode tnode = GetBehaviorNode(node.Filename, true);
+
             if (tnode != null)
             {
                 NodeTag nodetag = (NodeTag)tnode.Tag;
+
                 if (nodetag.Type == NodeTagType.Prefab)
                 {
                     tnode.ImageIndex = (int)NodeIcon.Prefab;
                     tnode.SelectedImageIndex = (int)NodeIcon.Prefab;
+
                 }
                 else
                 {
@@ -1884,11 +2145,18 @@ namespace Behaviac.Design
         private void ExportBehavior(TreeNodeCollection pool, string folder, bool exportNoGroups, ExporterInfo exporter, ref bool aborted)
         {
             if (aborted)
+            {
                 return;
+            }
 
             // Export the behavior for each tree node.
             foreach (TreeNode tnode in pool)
             {
+                if (aborted)
+                {
+                    break;
+                }
+
                 NodeTag nodetag = (NodeTag)tnode.Tag;
 
                 // If the tree node is selected and a behavior.
@@ -1898,20 +2166,26 @@ namespace Behaviac.Design
                     BehaviorNode node = GetBehavior(nodetag, tnode.Text);
                     Debug.Check(node != null);
 
-                    FileManagers.SaveResult saveResult = FileManagers.SaveResult.Succeeded;
+                    node.PreExport();
 
-                    //// Before exporting, we try to save this behavior if being modified.
-                    //if (node.IsModified)
-                    //    saveResult = SaveBehavior(node, false, false);
+                    FileManagers.SaveResult saveResult = FileManagers.SaveResult.Succeeded;
 
                     if (FileManagers.SaveResult.Succeeded == saveResult)
                     {
+                        string fullPath = tnode.FullPath;
+                        if (fullPath.StartsWith("Behaviors\\") || fullPath.StartsWith("Behaviors/"))
+                        {
+                            fullPath = fullPath.Substring(10);
+                        }
+
                         // Generate the new filename and the exporter.
-                        Exporters.Exporter exp = exporter.Create(node, folder, exportNoGroups ? tnode.Text : tnode.FullPath);
+                        Exporters.Exporter exp = exporter.Create(node, folder, exportNoGroups ? tnode.Text : fullPath);
 
                         // Export behavior.
                         saveResult = exp.Export();
                     }
+
+                    node.PostExport();
 
                     if (FileManagers.SaveResult.Cancelled == saveResult)
                     {
@@ -1928,8 +2202,10 @@ namespace Behaviac.Design
 
         private void GetExportBehaviors(TreeNodeCollection pool, bool exportNoGroups, ExporterInfo exporter, ref bool aborted, ref List<BehaviorNode> exportBehaviors)
         {
-            if (aborted)
+            if (aborted || pool == null)
+            {
                 return;
+            }
 
             // Export the behavior for each tree node.
             foreach (TreeNode tnode in pool)
@@ -1947,7 +2223,9 @@ namespace Behaviac.Design
 
                     // Before exporting, we try to save this behavior if being modified.
                     if (node.IsModified)
+                    {
                         saveResult = SaveBehavior(node, false, false);
+                    }
 
                     if (FileManagers.SaveResult.Cancelled == saveResult)
                     {
@@ -1964,63 +2242,61 @@ namespace Behaviac.Design
             }
         }
 
-        private bool UpdateExportedSettting(string exportedPath)
+        //private bool UpdateExportedSettting(string exportedPath) {
+        //    string exportedDbgXml = Path.Combine(exportedPath, "behaviors.dbg.xml");
+        //    FileManagers.SaveResult result = FileManagers.FileManager.MakeWritable(exportedDbgXml, Resources.FileWarning);
+
+        //    if (FileManagers.SaveResult.Succeeded == result) {
+        //        using(StreamWriter file = new StreamWriter(exportedDbgXml)) {
+        //            XmlWriterSettings ws = new XmlWriterSettings();
+        //            ws.Indent = true;
+        //            using(XmlWriter xmlWrtier = XmlWriter.Create(file, ws)) {
+        //                xmlWrtier.WriteStartDocument();
+
+        //                xmlWrtier.WriteComment("EXPORTED BY TOOL, DON'T MODIFY IT!");
+        //                xmlWrtier.WriteComment("DON'T REMOVE IT AS IT IS USED FOR DEBUGGING!");
+
+        //                xmlWrtier.WriteStartElement("workspace");
+
+        //                string fullPath = Path.GetFullPath(exportedDbgXml);
+        //                string fullPath1 = Path.GetFullPath(Workspace.Current.Folder);
+        //                string relativePath1 = Workspace.MakeRelative(fullPath1, fullPath, true);
+        //                string fullPath2 = Path.GetFullPath(Workspace.Current.XMLFolder);
+        //                string relativePath2 = Workspace.MakeRelative(fullPath2, fullPath, true);
+
+        //                string workspacePath = Workspace.MakeRelative(Workspace.Current.FileName, fullPath, true);
+
+        //                if (Path.IsPathRooted(workspacePath)) {
+        //                    MessageBox.Show("WorkspacePath should be a relative path!", "Update Export Setting", MessageBoxButtons.OK);
+        //                    Debug.Check(true);
+        //                }
+
+        //                //string workspacePath = Workspace.Current.FileName;
+
+        //                xmlWrtier.WriteAttributeString("name", Workspace.Current.Name);
+        //                xmlWrtier.WriteAttributeString("path", workspacePath);
+        //                xmlWrtier.WriteAttributeString("source", relativePath1);
+
+        //                xmlWrtier.WriteAttributeString("xmlmeta", relativePath2);
+
+        //                xmlWrtier.WriteEndElement();
+
+        //                xmlWrtier.WriteEndDocument();
+        //            }
+
+        //            file.Close();
+        //        }
+
+        //    } else if (FileManagers.SaveResult.Cancelled == result) {
+        //        return false;
+        //    }
+
+        //    return true;
+        //}
+
+        internal TreeNode GetBehaviorGroup()
         {
-            string exportedDbgXml = Path.Combine(exportedPath, "behaviors.dbg.xml");
-            FileManagers.SaveResult result = FileManagers.FileManager.MakeWritable(exportedDbgXml, Resources.FileWarning);
-            if (FileManagers.SaveResult.Succeeded == result)
-            {
-                using (StreamWriter file = new StreamWriter(exportedDbgXml))
-                {
-                    XmlWriterSettings ws = new XmlWriterSettings();
-                    ws.Indent = true;
-                    using (XmlWriter xmlWrtier = XmlWriter.Create(file, ws))
-                    {
-                        xmlWrtier.WriteStartDocument();
-
-                        xmlWrtier.WriteComment("EXPORTED BY TOOL, DON'T MODIFY IT!");
-
-                        xmlWrtier.WriteStartElement("workspace");
-
-                        string fullPath = Path.GetFullPath(exportedDbgXml);
-                        string fullPath1 = Path.GetFullPath(Workspace.Current.Folder);
-                        string relativePath1 = Workspace.MakeRelative(fullPath1, fullPath, true);
-                        string fullPath2 = Path.GetFullPath(Workspace.Current.XMLFolder);
-                        string relativePath2 = Workspace.MakeRelative(fullPath2, fullPath, true);
-
-                        string workspacePath = Workspace.MakeRelative(Workspace.Current.FileName, fullPath, true);
-                        if (Path.IsPathRooted(workspacePath))
-                        {
-                            MessageBox.Show("WorkspacePath should be a relative path!", "Update Export Setting", MessageBoxButtons.OK);
-                            Debug.Check(true);
-                        }
-                        //string workspacePath = Workspace.Current.FileName;
-
-                        xmlWrtier.WriteAttributeString("name", Workspace.Current.Name);
-                        xmlWrtier.WriteAttributeString("path", workspacePath);
-                        xmlWrtier.WriteAttributeString("source", relativePath1);
-
-                        xmlWrtier.WriteAttributeString("xmlmeta", relativePath2);
-
-                        xmlWrtier.WriteEndElement();
-
-                        xmlWrtier.WriteEndDocument();
-                    }
-
-                    file.Close();
-                }
-            }
-            else if (FileManagers.SaveResult.Cancelled == result)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        internal TreeNodeCollection GetBehaviorTreeNodes()
-        {
-            return GetBehaviorGroup(treeView.Nodes, _behaviorGroupName, _behaviorFolder).Nodes;
+            return GetBehaviorGroup(treeView.Nodes, _behaviorGroupName, _behaviorFolder);
         }
 
         /// <summary>
@@ -2030,6 +2306,16 @@ namespace Behaviac.Design
         /// <returns>Returns true if the user did not abort and all behaviors could be exported.</returns>
         internal bool ExportBehavior(BehaviorNode node, string format = "", bool ignoreErrors = false, TreeNode selectedTreeRoot = null)
         {
+            // save modified behaviors
+            if (node != null)
+            {
+                this.SaveBehavior(node, false, false);
+            }
+            else
+            {
+                this.SaveAll();
+            }
+
             // get the exporter index
             int formatIndex = Plugin.GetExporterIndex(format);
 
@@ -2041,34 +2327,80 @@ namespace Behaviac.Design
                 {
                     // show the dialogue
                     if (dialog.ShowDialog() == DialogResult.Cancel)
+                    {
                         return false;
+                    }
+
+                    if (!string.IsNullOrEmpty(Workspace.Current.Language) && Workspace.Current.Language != "cpp" && !Workspace.Current.IsSetExportFolder(Workspace.Current.Language))
+                    {
+                        if (DialogResult.OK == MessageBox.Show(Resources.InvalidExportedTypePath, Resources.ExportError, MessageBoxButtons.OK))
+                        {
+                            MetaStoreDock.Inspect(null);
+
+                            return false;
+                        }
+                    }
                 }
 
                 try
                 {
                     string exportedPath = Workspace.Current.DefaultExportFolder;
+
                     if (!Directory.Exists(exportedPath))
+                    {
                         Directory.CreateDirectory(exportedPath);
+                    }
 
                     if (exportedPath.StartsWith(_behaviorFolder, StringComparison.CurrentCultureIgnoreCase))
+                    {
                         throw new Exception("Behaviors cannot be exported into the behaviors source folder.");
+                    }
 
-                    if (this.UpdateExportedSettting(exportedPath))
+                    bool aborted = false;
+                    bool exportXML = false;
+                    bool exportBson = false;
+
+                    //if (this.UpdateExportedSettting(exportedPath)) 
                     {
                         Debug.Check(Workspace.Current != null);
 
                         for (int i = 0; i < Plugin.Exporters.Count; ++i)
                         {
                             ExporterInfo info = Plugin.Exporters[i];
-                            if (Workspace.Current.ShouldBeExported(info.ID))
+
+                            if ((string.IsNullOrEmpty(format) && (Workspace.Current.ShouldBeExported(info.ID) || (info.ID == Workspace.Current.Language))) || (info.ID == format))
                             {
-                                bool aborted = false;
-                                exportBehavior(i, exportedPath, dialog.treeView.Nodes, ref aborted);
+                                exportXML |= (info.ID == "xml");
+                                exportBson |= (info.ID == "bson");
+
+                                bool bExportBehaviors = dialog.ExportBehaviors;
+                                if (info.ID == Workspace.Current.Language && !Workspace.Current.ShouldBeExported(info.ID))
+                                    bExportBehaviors = false;
+
+                                exportBehavior(bExportBehaviors, i, exportedPath, dialog.treeView.Nodes, ref aborted);
+
                                 if (aborted)
+                                {
                                     break;
+                                }
                             }
                         }
+
+                        if (!aborted)
+                        {
+                            if (Workspace.Current.Language == "cpp")
+                            {
+                                Workspace.ExportCustomMembers(Workspace.Current, exportXML, exportBson);
+                            }
+
+                            Utilities.ReportExportBehavior();
+
+                            ErrorInfoDock.Inspect();
+                            string msg = string.Format(Resources.MessageBTExport, dialog.GetExportedInfo());
+                            ErrorInfoDock.WriteLineWithTime(msg);
+                        }
                     }
+
                 }
                 catch (Exception ex)
                 {
@@ -2080,14 +2412,26 @@ namespace Behaviac.Design
             return true;
         }
 
-        private void exportBehavior(int exporterIndex, string exportedPath, TreeNodeCollection nodes, ref bool aborted)
+        public void ExportTypes(int exporterIndex)
+        {
+            Debug.Check(exporterIndex >= 0 && exporterIndex < Plugin.Exporters.Count);
+
+            // retieve the correct exporter info
+            ExporterInfo exporter = Plugin.Exporters[exporterIndex];
+            Debug.Check(exporter.HasSettings);
+
+            string exportedPath = Workspace.Current.GetExportAbsoluteFolder(exporter.ID);
+            Exporters.Exporter exp = exporter.Create(null, exportedPath, "", null);
+
+            exp.Export(null, false, false);
+        }
+
+        private void exportBehavior(bool isExportingBehaviors, int exporterIndex, string exportedPath, TreeNodeCollection nodes, ref bool aborted)
         {
             // retieve the correct exporter info
             ExporterInfo exporter = Plugin.Exporters[exporterIndex];
-            if (!Workspace.Current.ShouldBeExported(exporter.ID))
-                return;
 
-            if (!exporter.ExportToUniqueFile)
+            if (!exporter.HasSettings)
             {
                 // export the selected behaviors
                 ExportBehavior(nodes, exportedPath, false, exporter, ref aborted);
@@ -2098,75 +2442,91 @@ namespace Behaviac.Design
                 List<BehaviorNode> exportBehaviors = new List<BehaviorNode>();
                 GetExportBehaviors(nodes, false, exporter, ref aborted, ref exportBehaviors);
 
-                // Generate the new filename and the exporter.
-                string exportFilename = Workspace.Current.GetExportFilename(exporter.ID);
-
-                string exportFolder = Workspace.Current.GetExportFolder(exporter.ID);
-                if (!string.IsNullOrEmpty(exportFolder))
-                {
-                    string wsFilename = Workspace.Current.FileName;
-                    wsFilename = wsFilename.Replace('/', '\\');
-                    exportFolder = exportFolder.Replace('/', '\\');
-                    exportFolder = FileManagers.FileManager.MakeAbsolute(wsFilename, exportFolder);
-                    exportedPath = exportFolder;
-                }
+                exportedPath = Workspace.Current.GetExportAbsoluteFolder(exporter.ID);
 
                 List<string> exportIncludedFilenames = Workspace.Current.GetExportIncludedFilenames(exporter.ID);
-                Exporters.Exporter exp = exporter.Create(null, exportedPath, exportFilename, exportIncludedFilenames);
+                Exporters.Exporter exp = exporter.Create(null, exportedPath, "", exportIncludedFilenames);
 
                 // Export behavior.
-                exp.Export(exportBehaviors);
+                exp.Export(exportBehaviors, Workspace.Current.ExportedUnifiedFile(exporter.ID), isExportingBehaviors);
+
+                ErrorInfoDock.WriteExportTypeInfo();
             }
         }
 
-        internal void OpenWorkspace()
+        internal void OpenWorkspace(string wksFile = "")
         {
-            openFileDialog.CheckFileExists = true;
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            if (string.IsNullOrEmpty(wksFile))
             {
-                if (Plugin.WorkspaceDelegateHandler != null)
+                openFileDialog.CheckFileExists = true;
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    if (Plugin.WorkspaceDelegateHandler(openFileDialog.FileName, false, false))
-                    {
-                        string wksFile = openFileDialog.FileName;
-                        MainWindow.Instance.RecentWorkspacesMenu.AddFile(wksFile);
+                    wksFile = openFileDialog.FileName;
+                }
+            }
 
-                        int index = MainWindow.Instance.RecentWorkspacesMenu.FindFilenameNumber(wksFile);
-                        MainWindow.Instance.RecentWorkspacesMenu.SetFirstFile(index);
-                    }
+            if (!string.IsNullOrEmpty(wksFile))
+            {
+                if (Plugin.WorkspaceDelegateHandler != null && Plugin.WorkspaceDelegateHandler(wksFile, false))
+                {
+                    MainWindow.Instance.RecentWorkspacesMenu.AddFile(wksFile);
+
+                    int index = MainWindow.Instance.RecentWorkspacesMenu.FindFilenameNumber(wksFile);
+                    MainWindow.Instance.RecentWorkspacesMenu.SetFirstFile(index);
+                }
+                else
+                {
+                    string errorInfo = string.Format(Resources.WorkspaceLoadError, wksFile);
+                    MessageBox.Show(errorInfo, Resources.LoadError, MessageBoxButtons.OK);
                 }
             }
         }
 
         public void HandleConnect()
         {
-            if (NetworkManager.Instance.IsConnected())
+            try
             {
-                if (Settings.Default.DumpConnectData)
-                {
-                    this.DumpLogFile();
-                }
+                Plugin.WrongWorksapceReported = false;
 
-                NetworkManager.Instance.Disconnect();
-
-                Plugin.EditMode = EditModes.Design;
-            }
-            else
-            {
-                using (ConnectDialog cd = new ConnectDialog(NetworkManager.ServerPort))
+                if (Plugin.EditMode == EditModes.Connect || NetworkManager.Instance.IsConnected())
                 {
-                    if (cd.ShowDialog(this) == DialogResult.OK)
+                    if (Settings.Default.DumpConnectData)
                     {
-                        NetworkManager.ServerIP = cd.GetServer();
-                        NetworkManager.ServerPort = cd.GetPort();
+                        this.DumpLogFile();
+                    }
 
-                        //it is too early now to send Settings.Default.BreakAPP to app as 
-                        //it will cause inconsistence in breakpoints checking
-                        //BreakAPP can only be sent to cpp after all the breakpoints info have been sent
-                        if (NetworkManager.Instance.Connect(cd.GetServer(), cd.GetPort()))
-                            Plugin.EditMode = EditModes.Connect;
+                    NetworkManager.Instance.Disconnect();
+                    Plugin.DebugAgentInstance = string.Empty;
+
+                    Plugin.EditMode = EditModes.Design;
+                }
+                else
+                {
+                    FileManagers.SaveResult saveResult = MainWindow.Instance.CheckSavingBehaviors();
+                    if (saveResult != FileManagers.SaveResult.Cancelled)
+                    {
+                        using (ConnectDialog cd = new ConnectDialog(NetworkManager.UseLocalIP, NetworkManager.ServerIP, NetworkManager.ServerPort))
+                        {
+                            if (cd.ShowDialog(this) == DialogResult.OK)
+                            {
+                                NetworkManager.UseLocalIP = cd.UseLocalIP();
+                                NetworkManager.ServerIP = cd.GetServer();
+                                NetworkManager.ServerPort = cd.GetPort();
+
+                                if (NetworkManager.Instance.Connect(cd.GetServer(), cd.GetPort()))
+                                {
+                                    Plugin.EditMode = EditModes.Connect;
+
+                                    Utilities.ReportConnectGame();
+                                }
+                            }
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Debug.Check(false, ex.Message);
             }
         }
 
@@ -2177,21 +2537,43 @@ namespace Behaviac.Design
                 using (OpenFileDialog openFileDialog = new OpenFileDialog())
                 {
                     openFileDialog.Title = Resources.OpenDumpFile;
-                    openFileDialog.Filter = "*.dump|*.dump";
+                    openFileDialog.Filter = "*.*|*.*|*.log|*.log|*.dump|*.dump";
 
                     if (openFileDialog.ShowDialog() == DialogResult.OK)
                     {
+                        //set the EditMode here as it will be used when processing log
                         Plugin.EditMode = EditModes.Analyze;
 
+                        string ext = Path.GetExtension(openFileDialog.FileName);
+                        ext = ext.ToLower();
+
+                        if (ext == ".dump")
+                        {
+                            AgentDataPool.LoadDump(openFileDialog.FileName, Workspace.Current.Name);
+                        }
+                        else if (ext == ".log")
+                        {
+                            AgentDataPool.LoadLog(openFileDialog.FileName);
+                        }
+                        else
+                        {
+                            string errMsg = string.Format("'{0}' is not supported. only .log or .dump are suported.", ext);
+                            MessageBox.Show(errMsg, Resources.LoadError, MessageBoxButtons.OK);
+                            Plugin.EditMode = EditModes.Design;
+                            return;
+                        }
+
                         BehaviorTreeViewDock.ClearHighlights();
-                        AgentDataPool.Load(openFileDialog.FileName, Workspace.Current.Name);
 
                         int firstFrame = MessageQueue.MessageFirstFrame();
                         TimelineDock.SetTotalFrame(AgentDataPool.TotalFrames, firstFrame);
-                        TimelineDock.SetCurrentFrame(firstFrame);
+                        //TimelineDock.SetCurrentFrame(firstFrame);
+                        TimelineDock.SetCurrentFrame(AgentDataPool.TotalFrames);
+
                         TimelineDock.UpdateUIState(Plugin.EditMode);
                     }
                 }
+
             }
             else if (Plugin.EditMode == EditModes.Analyze)
             {
@@ -2226,23 +2608,32 @@ namespace Behaviac.Design
         /// <returns>Returns the NodeViewData which will be shown.</returns>
         internal NodeViewData ShowNode(Node node, Node root = null)
         {
-            if (node != null)
+            try
             {
-                if (ShowBehavior != null)
+                if (node != null)
                 {
-                    if (root != null && root is BehaviorNode)
+                    if (ShowBehavior != null)
                     {
-                        ShowBehavior((BehaviorNode)root);
+                        if (root != null && root is BehaviorNode)
+                        {
+                            ShowBehavior((BehaviorNode)root);
+                        }
+                        else
+                        {
+                            ShowBehavior(node.Behavior);
+                        }
                     }
-                    else
+
+                    BehaviorTreeView behaviorTreeView = getFocusedView();
+
+                    if (behaviorTreeView != null && behaviorTreeView.RootNodeView != null)
                     {
-                        ShowBehavior(node.Behavior);
+                        return behaviorTreeView.RootNodeView.FindNodeViewData(node);
                     }
                 }
-
-                BehaviorTreeView behaviorTreeView = getFocusedView();
-                if (behaviorTreeView != null && behaviorTreeView.RootNodeView != null)
-                    return behaviorTreeView.RootNodeView.FindNodeViewData(node);
+            }
+            catch
+            {
             }
 
             return null;
@@ -2261,6 +2652,7 @@ namespace Behaviac.Design
             if (digits.Length == 4)
             {
                 int shift = 0;
+
                 for (int i = digits.Length - 1; i >= 0; --i)
                 {
                     int verI = Convert.ToInt32(digits[i]);
@@ -2304,24 +2696,28 @@ namespace Behaviac.Design
 
                     string questionStr = string.Format(Resources.NewerVersionInfo, newerFile, urlNewVersionFile);
                     DialogResult dr = MessageBox.Show(questionStr, Resources.NewerVersionFound, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
                     if (dr == DialogResult.Yes)
                     {
                         if (!url_server.StartsWith("http"))
                         {
                             urlNewVersionFile = "file:" + urlNewVersionFile;
                             System.Diagnostics.Process.Start(url_server, newerFile);
+
                         }
                         else
                         {
                             System.Diagnostics.Process.Start(urlNewVersionFile);
                         }
                     }
+
                 }
                 else
                 {
                     string message = string.Format(Resources.LatestVersionInfo, verStr);
                     MessageBox.Show(message, Resources.BehaviacDesigner, MessageBoxButtons.OK, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1);
                 }
+
             }
             catch (Exception e)
             {
@@ -2341,6 +2737,7 @@ namespace Behaviac.Design
                 System.Uri uri = new System.Uri(urlVersionFile);
 
                 wc.DownloadDataAsync(uri, waiter);
+
             }
             catch (Exception e)
             {
@@ -2384,6 +2781,7 @@ namespace Behaviac.Design
                                 {
                                     urlNewVersionFile = "file:" + urlNewVersionFile;
                                     System.Diagnostics.Process.Start(url_server, newerFile);
+
                                 }
                                 else
                                 {
@@ -2394,6 +2792,7 @@ namespace Behaviac.Design
                     }
                 }
             }
+
             finally
             {
                 // Let the main application thread resume.
@@ -2414,23 +2813,35 @@ namespace Behaviac.Design
         private void timer_Tick(object sender, EventArgs e)
         {
             if (TickDelegateHandler != null)
+            {
                 TickDelegateHandler();
+            }
         }
 
         private void expandMenuItem_Click(object sender, EventArgs e)
         {
             if (this.treeView.SelectedNode != null)
+            {
                 this.treeView.SelectedNode.ExpandAll();
+            }
+
             else
+            {
                 this.treeView.ExpandAll();
+            }
         }
 
         private void collapseMenuItem_Click(object sender, EventArgs e)
         {
             if (this.treeView.SelectedNode != null)
+            {
                 this.treeView.SelectedNode.Collapse();
+            }
+
             else
+            {
                 this.treeView.CollapseAll();
+            }
         }
 
         private void exportMenuItem_Click(object sender, EventArgs e)
@@ -2442,13 +2853,18 @@ namespace Behaviac.Design
                 if (nodetag.Type == NodeTagType.Behavior)
                 {
                     BehaviorNode behavior = LoadBehavior(nodetag.Filename);
+
                     if (behavior != null)
+                    {
                         ExportBehavior(behavior);
+                    }
+
                 }
                 else if (nodetag.Type == NodeTagType.BehaviorFolder)
                 {
                     ExportBehavior(null, "", false, this.treeView.SelectedNode);
                 }
+
             }
             else
             {
@@ -2469,7 +2885,9 @@ namespace Behaviac.Design
                 saveFileDialog.Filter = "*.dump|*.dump";
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
                     AgentDataPool.Save(saveFileDialog.FileName, Workspace.Current.FileName);
+                }
             }
         }
 
@@ -2490,6 +2908,7 @@ namespace Behaviac.Design
                     try
                     {
                         SaveBehavior(node, false);
+
                     }
                     catch (Exception ex)
                     {
@@ -2506,6 +2925,7 @@ namespace Behaviac.Design
                     try
                     {
                         SaveBehavior(node, false);
+
                     }
                     catch (Exception ex)
                     {
@@ -2516,7 +2936,9 @@ namespace Behaviac.Design
 
             // restore the previously shown behavior
             if (currentNode != null && ShowBehavior != null)
+            {
                 ShowBehavior(currentNode);
+            }
         }
 
         internal void ForceSaveAll()
@@ -2525,16 +2947,21 @@ namespace Behaviac.Design
             foreach (BehaviorNode node in _newBehaviors)
             {
                 MainWindow.Instance.EnableFileWatcher(false);
+
                 try
                 {
-                    //SaveBehavior(node, false); 
+                    //SaveBehavior(node, false);
                     if (node.FileManager != null)
+                    {
                         node.FileManager.Save();
+                    }
+
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message, Resources.SaveError, MessageBoxButtons.OK);
                 }
+
                 finally
                 {
                     MainWindow.Instance.EnableFileWatcher(true);
@@ -2547,14 +2974,19 @@ namespace Behaviac.Design
                 try
                 {
                     MainWindow.Instance.EnableFileWatcher(false);
-                    //SaveBehavior(node, false); 
+
+                    //SaveBehavior(node, false);
                     if (node.FileManager != null)
+                    {
                         node.FileManager.Save();
+                    }
+
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message, Resources.SaveError, MessageBoxButtons.OK);
                 }
+
                 finally
                 {
                     MainWindow.Instance.EnableFileWatcher(true);
@@ -2587,6 +3019,7 @@ namespace Behaviac.Design
                 this.deleteMenuItem.Enabled = true;
                 this.saveBehaviorContextMenuItem.Enabled = true;
                 this.saveAsBehaviorContextMenuItem.Enabled = true;
+
             }
             else
             {
@@ -2604,6 +3037,11 @@ namespace Behaviac.Design
             FindFileDialog.Inspect();
         }
 
+        private void openBehaviorMenuItem_Click(object sender, EventArgs e)
+        {
+            this.OpenBehavior(treeView.SelectedNode, true);
+        }
+
         private void newBehaviorMenuItem_Click(object sender, EventArgs e)
         {
             this.NewBehavior();
@@ -2612,6 +3050,14 @@ namespace Behaviac.Design
         private void createGroupMenuItem_Click(object sender, EventArgs e)
         {
             this.CreateGroup();
+        }
+
+        private void renameMenuItem_Click(object sender, EventArgs e)
+        {
+            if (this.treeView.SelectedNode != null)
+            {
+                this.treeView.SelectedNode.BeginEdit();
+            }
         }
 
         private void saveBehaviorContextMenuItem_Click(object sender, EventArgs e)

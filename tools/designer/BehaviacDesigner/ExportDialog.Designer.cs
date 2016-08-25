@@ -33,45 +33,42 @@
 
 namespace Behaviac.Design
 {
-	partial class ExportDialog
-	{
-		/// <summary>
-		/// Required designer variable.
-		/// </summary>
-		private System.ComponentModel.IContainer components = null;
+    partial class ExportDialog
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
 
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing) {
+            if (disposing && (components != null)) {
+                components.Dispose();
+            }
 
-		#region Windows Form Designer generated code
+            base.Dispose(disposing);
+        }
 
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent()
-		{
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent() {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ExportDialog));
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle6 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle8 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle9 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle10 = new System.Windows.Forms.DataGridViewCellStyle();
-            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle7 = new System.Windows.Forms.DataGridViewCellStyle();
-            this.folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog();
-            this.exportButton = new System.Windows.Forms.Button();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle3 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle4 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle5 = new System.Windows.Forms.DataGridViewCellStyle();
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle2 = new System.Windows.Forms.DataGridViewCellStyle();
+            this.exportAllButton = new System.Windows.Forms.Button();
             this.cancelButton = new System.Windows.Forms.Button();
-            this.label2 = new System.Windows.Forms.Label();
+            this.exportBehaviorsLabel = new System.Windows.Forms.Label();
             this.exportSettingLabel = new System.Windows.Forms.Label();
             this.treeView = new System.Windows.Forms.TreeView();
             this.imageList = new System.Windows.Forms.ImageList(this.components);
@@ -80,23 +77,21 @@ namespace Behaviac.Design
             this.Enable = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.Format = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Setting = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.onlyShowErrorsCheckBox = new System.Windows.Forms.CheckBox();
+            this.exportTypesButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.exportSettingGridView)).BeginInit();
             this.SuspendLayout();
             // 
-            // folderBrowserDialog
+            // exportAllButton
             // 
-            resources.ApplyResources(this.folderBrowserDialog, "folderBrowserDialog");
-            this.folderBrowserDialog.RootFolder = System.Environment.SpecialFolder.MyComputer;
-            // 
-            // exportButton
-            // 
-            resources.ApplyResources(this.exportButton, "exportButton");
-            this.exportButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            this.exportButton.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.exportButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
-            this.exportButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
-            this.exportButton.Name = "exportButton";
-            this.exportButton.UseVisualStyleBackColor = false;
+            resources.ApplyResources(this.exportAllButton, "exportAllButton");
+            this.exportAllButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            this.exportAllButton.DialogResult = System.Windows.Forms.DialogResult.OK;
+            this.exportAllButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            this.exportAllButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            this.exportAllButton.Name = "exportAllButton";
+            this.exportAllButton.UseVisualStyleBackColor = false;
+            this.exportAllButton.Click += new System.EventHandler(this.exportAllButton_Click);
             // 
             // cancelButton
             // 
@@ -108,10 +103,10 @@ namespace Behaviac.Design
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.UseVisualStyleBackColor = false;
             // 
-            // label2
+            // exportBehaviorsLabel
             // 
-            resources.ApplyResources(this.label2, "label2");
-            this.label2.Name = "label2";
+            resources.ApplyResources(this.exportBehaviorsLabel, "exportBehaviorsLabel");
+            this.exportBehaviorsLabel.Name = "exportBehaviorsLabel";
             // 
             // exportSettingLabel
             // 
@@ -128,6 +123,7 @@ namespace Behaviac.Design
             this.treeView.Name = "treeView";
             this.treeView.BeforeCheck += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeView_BeforeCheck);
             this.treeView.AfterCheck += new System.Windows.Forms.TreeViewEventHandler(this.treeView_AfterCheck);
+            this.treeView.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView_NodeMouseDoubleClick);
             // 
             // imageList
             // 
@@ -140,6 +136,7 @@ namespace Behaviac.Design
             // 
             resources.ApplyResources(this.fileCountLabel, "fileCountLabel");
             this.fileCountLabel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            this.fileCountLabel.ForeColor = System.Drawing.Color.Orange;
             this.fileCountLabel.Name = "fileCountLabel";
             // 
             // exportSettingGridView
@@ -149,41 +146,41 @@ namespace Behaviac.Design
             this.exportSettingGridView.AllowUserToDeleteRows = false;
             this.exportSettingGridView.AllowUserToResizeRows = false;
             this.exportSettingGridView.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            dataGridViewCellStyle6.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle6.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            dataGridViewCellStyle6.Font = new System.Drawing.Font("SimSun", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            dataGridViewCellStyle6.ForeColor = System.Drawing.Color.LightGray;
-            dataGridViewCellStyle6.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle6.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-            dataGridViewCellStyle6.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-            this.exportSettingGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle6;
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            dataGridViewCellStyle1.Font = new System.Drawing.Font("SimSun", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            dataGridViewCellStyle1.ForeColor = System.Drawing.Color.LightGray;
+            dataGridViewCellStyle1.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle1.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle1.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.exportSettingGridView.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             this.exportSettingGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.exportSettingGridView.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.Enable,
             this.Format,
             this.Setting});
-            dataGridViewCellStyle8.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle8.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            dataGridViewCellStyle8.Font = new System.Drawing.Font("SimSun", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            dataGridViewCellStyle8.ForeColor = System.Drawing.Color.LightGray;
-            dataGridViewCellStyle8.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle8.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-            dataGridViewCellStyle8.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
-            this.exportSettingGridView.DefaultCellStyle = dataGridViewCellStyle8;
+            dataGridViewCellStyle3.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            dataGridViewCellStyle3.Font = new System.Drawing.Font("SimSun", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            dataGridViewCellStyle3.ForeColor = System.Drawing.Color.LightGray;
+            dataGridViewCellStyle3.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle3.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle3.WrapMode = System.Windows.Forms.DataGridViewTriState.False;
+            this.exportSettingGridView.DefaultCellStyle = dataGridViewCellStyle3;
             this.exportSettingGridView.MultiSelect = false;
             this.exportSettingGridView.Name = "exportSettingGridView";
-            dataGridViewCellStyle9.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
-            dataGridViewCellStyle9.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            dataGridViewCellStyle9.Font = new System.Drawing.Font("SimSun", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            dataGridViewCellStyle9.ForeColor = System.Drawing.Color.LightGray;
-            dataGridViewCellStyle9.SelectionBackColor = System.Drawing.SystemColors.Highlight;
-            dataGridViewCellStyle9.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
-            dataGridViewCellStyle9.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
-            this.exportSettingGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle9;
+            dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleLeft;
+            dataGridViewCellStyle4.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            dataGridViewCellStyle4.Font = new System.Drawing.Font("SimSun", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            dataGridViewCellStyle4.ForeColor = System.Drawing.Color.LightGray;
+            dataGridViewCellStyle4.SelectionBackColor = System.Drawing.SystemColors.Highlight;
+            dataGridViewCellStyle4.SelectionForeColor = System.Drawing.SystemColors.HighlightText;
+            dataGridViewCellStyle4.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
+            this.exportSettingGridView.RowHeadersDefaultCellStyle = dataGridViewCellStyle4;
             this.exportSettingGridView.RowHeadersVisible = false;
-            dataGridViewCellStyle10.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            dataGridViewCellStyle10.ForeColor = System.Drawing.Color.LightGray;
-            this.exportSettingGridView.RowsDefaultCellStyle = dataGridViewCellStyle10;
+            dataGridViewCellStyle5.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            dataGridViewCellStyle5.ForeColor = System.Drawing.Color.LightGray;
+            this.exportSettingGridView.RowsDefaultCellStyle = dataGridViewCellStyle5;
             this.exportSettingGridView.RowTemplate.Height = 23;
             this.exportSettingGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.exportSettingGridView.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.exportSettingGridView_CellContentClick);
@@ -205,29 +202,51 @@ namespace Behaviac.Design
             // 
             // Setting
             // 
-            dataGridViewCellStyle7.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
-            dataGridViewCellStyle7.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
-            dataGridViewCellStyle7.ForeColor = System.Drawing.Color.LightGray;
-            this.Setting.DefaultCellStyle = dataGridViewCellStyle7;
+            dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            dataGridViewCellStyle2.ForeColor = System.Drawing.Color.LightGray;
+            this.Setting.DefaultCellStyle = dataGridViewCellStyle2;
             this.Setting.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
             resources.ApplyResources(this.Setting, "Setting");
             this.Setting.Name = "Setting";
             this.Setting.Resizable = System.Windows.Forms.DataGridViewTriState.False;
             // 
+            // onlyShowErrorsCheckBox
+            // 
+            resources.ApplyResources(this.onlyShowErrorsCheckBox, "onlyShowErrorsCheckBox");
+            this.onlyShowErrorsCheckBox.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            this.onlyShowErrorsCheckBox.ForeColor = System.Drawing.Color.LightGray;
+            this.onlyShowErrorsCheckBox.Name = "onlyShowErrorsCheckBox";
+            this.onlyShowErrorsCheckBox.UseVisualStyleBackColor = false;
+            this.onlyShowErrorsCheckBox.CheckedChanged += new System.EventHandler(this.onlyShowErrorsCheckBox_CheckedChanged);
+            // 
+            // exportTypesButton
+            // 
+            resources.ApplyResources(this.exportTypesButton, "exportTypesButton");
+            this.exportTypesButton.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(65)))), ((int)(((byte)(65)))), ((int)(((byte)(65)))));
+            this.exportTypesButton.DialogResult = System.Windows.Forms.DialogResult.OK;
+            this.exportTypesButton.FlatAppearance.MouseDownBackColor = System.Drawing.Color.DarkGray;
+            this.exportTypesButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.DarkGray;
+            this.exportTypesButton.Name = "exportTypesButton";
+            this.exportTypesButton.UseVisualStyleBackColor = false;
+            this.exportTypesButton.Click += new System.EventHandler(this.exportTypesButton_Click);
+            // 
             // ExportDialog
             // 
-            this.AcceptButton = this.exportButton;
+            this.AcceptButton = this.exportAllButton;
             resources.ApplyResources(this, "$this");
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(56)))), ((int)(((byte)(56)))), ((int)(((byte)(56)))));
             this.CancelButton = this.cancelButton;
+            this.Controls.Add(this.exportTypesButton);
+            this.Controls.Add(this.onlyShowErrorsCheckBox);
             this.Controls.Add(this.exportSettingGridView);
             this.Controls.Add(this.fileCountLabel);
             this.Controls.Add(this.treeView);
             this.Controls.Add(this.exportSettingLabel);
-            this.Controls.Add(this.label2);
+            this.Controls.Add(this.exportBehaviorsLabel);
             this.Controls.Add(this.cancelButton);
-            this.Controls.Add(this.exportButton);
+            this.Controls.Add(this.exportAllButton);
             this.ForeColor = System.Drawing.Color.LightGray;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -238,21 +257,22 @@ namespace Behaviac.Design
             this.ResumeLayout(false);
             this.PerformLayout();
 
-		}
+        }
 
-		#endregion
+        #endregion
 
-		private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog;
-		private System.Windows.Forms.Button exportButton;
+        private System.Windows.Forms.Button exportAllButton;
         private System.Windows.Forms.Button cancelButton;
-		private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label exportBehaviorsLabel;
         private System.Windows.Forms.Label exportSettingLabel;
-		internal System.Windows.Forms.TreeView treeView;
+        internal System.Windows.Forms.TreeView treeView;
         private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.Label fileCountLabel;
         private System.Windows.Forms.DataGridView exportSettingGridView;
+        private System.Windows.Forms.CheckBox onlyShowErrorsCheckBox;
+        private System.Windows.Forms.Button exportTypesButton;
         private System.Windows.Forms.DataGridViewCheckBoxColumn Enable;
         private System.Windows.Forms.DataGridViewTextBoxColumn Format;
         private System.Windows.Forms.DataGridViewButtonColumn Setting;
-	}
+    }
 }

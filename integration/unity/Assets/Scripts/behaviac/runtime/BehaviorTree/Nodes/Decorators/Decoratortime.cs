@@ -12,48 +12,58 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace behaviac
 {
     public class DecoratorTime : DecoratorNode
     {
-        public DecoratorTime()
-        {
-		}
-        ~DecoratorTime()
-        {
-            this.m_time_var = null;
-        }
+        protected IInstanceMember m_time;
 
         protected override void load(int version, string agentType, List<property_t> properties)
         {
-			base.load(version, agentType, properties);
+            base.load(version, agentType, properties);
 
-			foreach (property_t p in properties)
-			{
-				if (p.name == "Time")
-				{
-					string typeName = null;
-					string propertyName = null;
-					this.m_time_var = Condition.LoadRight(p.value, propertyName, ref typeName);
-				}
-			}
-		}
-
-        protected virtual int GetTime(Agent pAgent)
-        {
-            if (this.m_time_var != null)
+            for (int i = 0; i < properties.Count; ++i)
             {
-                Debug.Check(this.m_time_var != null);
-                int time = (int)this.m_time_var.GetValue(pAgent);
+                property_t p = properties[i];
+                if (p.name == "Time")
+                {
+                    int pParenthesis = p.value.IndexOf('(');
 
-                return time;
+                    if (pParenthesis == -1)
+                    {
+                        this.m_time = AgentMeta.ParseProperty(p.value);
+                    }
+                    else
+                    {
+                        this.m_time = AgentMeta.ParseMethod(p.value);
+                    }
+                }
+            }
+        }
+
+        protected virtual double GetTime(Agent pAgent)
+        {
+            double time = 0;
+
+            if (this.m_time != null)
+            {
+                if (this.m_time is CInstanceMember<double>)
+                {
+                    time = ((CInstanceMember<double>)this.m_time).GetValue(pAgent);
+                }
+                else if (this.m_time is CInstanceMember<float>)
+                {
+                    time = ((CInstanceMember<float>)this.m_time).GetValue(pAgent);
+                }
+                else if (this.m_time is CInstanceMember<int>)
+                {
+                    time = ((CInstanceMember<int>)this.m_time).GetValue(pAgent);
+                }
             }
 
-            return 0;
+            return time;
         }
 
         protected override BehaviorTask createTask()
@@ -63,18 +73,8 @@ namespace behaviac
             return pTask;
         }
 
-        Property m_time_var;
-
-        class DecoratorTimeTask : DecoratorTask
+        private class DecoratorTimeTask : DecoratorTask
         {
-            public DecoratorTimeTask()
-            {
-            }
-
-            ~DecoratorTimeTask()
-            {
-            }
-
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -96,6 +96,7 @@ namespace behaviac
                 CSerializationID timeId = new CSerializationID("time");
                 node.setAttr(timeId, this.m_time);
             }
+
             public override void load(ISerializableNode node)
             {
                 base.load(node);
@@ -105,7 +106,7 @@ namespace behaviac
             {
                 base.onenter(pAgent);
 
-                this.m_start = 0;
+                this.m_start = Workspace.Instance.TimeSinceStartup * 1000.0;
                 this.m_time = this.GetTime(pAgent);
 
                 return (this.m_time >= 0);
@@ -113,8 +114,7 @@ namespace behaviac
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-				this.m_start += (int)(Time.deltaTime * 1000.0f);
-                if (this.m_start >= this.m_time)
+                if (Workspace.Instance.TimeSinceStartup * 1000.0 - this.m_start >= this.m_time)
                 {
                     return EBTStatus.BT_SUCCESS;
                 }
@@ -122,7 +122,7 @@ namespace behaviac
                 return EBTStatus.BT_RUNNING;
             }
 
-            int GetTime(Agent pAgent)
+            private double GetTime(Agent pAgent)
             {
                 Debug.Check(this.GetNode() is DecoratorTime);
                 DecoratorTime pNode = (DecoratorTime)(this.GetNode());
@@ -130,8 +130,8 @@ namespace behaviac
                 return pNode != null ? pNode.GetTime(pAgent) : 0;
             }
 
-            int m_start;
-            int m_time;
+            private double m_start = 0;
+            private double m_time = 0;
         }
     }
 }

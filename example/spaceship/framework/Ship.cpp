@@ -22,16 +22,20 @@ namespace framework
 	Renderer* framework::renderer;
 	GameLogic* framework::gl;
 
-	BEGIN_PROPERTIES_DESCRIPTION(Ship)
-		REGISTER_METHOD(checkresult);
-		REGISTER_METHOD(Fire);
-		REGISTER_METHOD(GotoPoint).PARAM_DISPLAY_INFO(L"x").PARAM_DISPLAY_INFO(L"y").PARAM_DISPLAY_INFO(L"speed");
-		REGISTER_METHOD(GotoPointRelative).PARAM_DISPLAY_INFO(L"x").PARAM_DISPLAY_INFO(L"y").PARAM_DISPLAY_INFO(L"time");
-		REGISTER_METHOD(DestroyAllNearbyProjectiles).PARAM_DISPLAY_INFO(L"radius");
+	BEHAVIAC_BEGIN_PROPERTIES(Ship)
+	{
+		BEHAVIAC_REGISTER_METHOD(checkresult);
+		BEHAVIAC_REGISTER_METHOD(Fire);
+		BEHAVIAC_REGISTER_METHOD(GotoPoint).PARAM_DISPLAY_INFO(L"x").PARAM_DISPLAY_INFO(L"y").PARAM_DISPLAY_INFO(L"speed");
+		BEHAVIAC_REGISTER_METHOD(GotoPointRelative).PARAM_DISPLAY_INFO(L"x").PARAM_DISPLAY_INFO(L"y").PARAM_DISPLAY_INFO(L"time");
+		BEHAVIAC_REGISTER_METHOD(DestroyAllNearbyProjectiles).PARAM_DISPLAY_INFO(L"radius");
 
-		REGISTER_METHOD(getXPosition);
-		REGISTER_METHOD(getYPosition);
-	END_PROPERTIES_DESCRIPTION()
+		BEHAVIAC_REGISTER_METHOD(getXPosition);
+		BEHAVIAC_REGISTER_METHOD(getYPosition);
+		BEHAVIAC_REGISTER_METHOD(GetConstFloatValue);
+		BEHAVIAC_REGISTER_METHOD(GetConstDoubleValue);
+	}
+	BEHAVIAC_END_PROPERTIES()
 
 	Ship::Ship() : GameObject(), projectileBrain(0), m_bStarted(false), m_time(0.0f), m_speed(0.0f)
 	{
@@ -167,6 +171,16 @@ namespace framework
 		ws->moveObject(this, finalPosition);
 
 		return false;
+	}
+
+	float Ship::GetConstFloatValue()
+	{
+		return 1000.0f;
+	}
+
+	double Ship::GetConstDoubleValue()
+	{
+		return 1000.0;
 	}
 
 	void Ship::DestroyAllNearbyProjectiles(float radius)

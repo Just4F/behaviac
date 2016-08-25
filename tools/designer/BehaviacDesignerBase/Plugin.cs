@@ -59,14 +59,6 @@ namespace Behaviac.Design
     /// </summary>
     public class NodeTag
     {
-        public interface DefaultObject
-        {
-            string Description { get; }
-            string Label { get; }
-            BehaviorNode Behavior { get; }
-            int Id { get; }
-        }
-
         protected NodeTagType _type;
 
         /// <summary>
@@ -100,7 +92,7 @@ namespace Behaviac.Design
                 _filename = value;
 
                 if (_defaults != null && _defaults.Behavior != null)
-                    _defaults.Behavior.Filename = value;
+                { _defaults.Behavior.Filename = value; }
             }
         }
 
@@ -122,7 +114,7 @@ namespace Behaviac.Design
         public void AssignLoadedBehavior(BehaviorNode behavior)
         {
             Debug.Check(_type == NodeTagType.Behavior || _type == NodeTagType.Prefab);
-            Debug.Check(_filename == behavior.FileManager.Filename);
+            Debug.Check(behavior.FileManager == null || _filename == behavior.FileManager.Filename);
 
             _defaults = (DefaultObject)behavior;
         }
@@ -136,7 +128,7 @@ namespace Behaviac.Design
         public NodeTag(NodeTagType type, Type nodetype, string filename)
         {
             if ((type == NodeTagType.BehaviorFolder || type == NodeTagType.PrefabFolder || type == NodeTagType.NodeFolder) && nodetype != null)
-                throw new Exception(Resources.ExceptionWrongNodeTagType);
+            { throw new Exception(Resources.ExceptionWrongNodeTagType); }
 
             _type = type;
             _nodetype = nodetype;
@@ -144,6 +136,7 @@ namespace Behaviac.Design
             if (nodetype == null)
             {
                 _defaults = null;
+
             }
             else
             {
@@ -151,10 +144,10 @@ namespace Behaviac.Design
                 //	throw new Exception(Resources.ExceptionNotImplementDefaultObject);
 
                 if (nodetype.IsSubclassOf(typeof(Attachments.Attachment)) && type != NodeTagType.Attachment)
-                    throw new Exception(Resources.ExceptionWrongNodeTagType);
+                { throw new Exception(Resources.ExceptionWrongNodeTagType); }
 
                 if (nodetype.IsSubclassOf(typeof(Nodes.Node)) && type != NodeTagType.Node && type != NodeTagType.Behavior && type != NodeTagType.Prefab)
-                    throw new Exception(Resources.ExceptionWrongNodeTagType);
+                { throw new Exception(Resources.ExceptionWrongNodeTagType); }
 
                 switch (type)
                 {
@@ -311,7 +304,7 @@ namespace Behaviac.Design
             _icon = icon;
 
             if (parent != null)
-                parent.Children.Add(this);
+            { parent.Children.Add(this); }
         }
     }
 
@@ -346,7 +339,7 @@ namespace Behaviac.Design
 
             // the file extension must always start with a dot
             if (_fileExtension[0] != '.')
-                _fileExtension = '.' + _fileExtension;
+            { _fileExtension = '.' + _fileExtension; }
         }
 
         protected Type _type;
@@ -393,13 +386,7 @@ namespace Behaviac.Design
         /// <param name="outputFolder">The folder you want to export the behaviour to.</param>
         /// <param name="filename">The relative filename you want to export the behaviour to.</param>
         /// <returns>Returns the created exporter.</returns>
-        public Exporters.Exporter Create(Nodes.BehaviorNode node, string outputFolder, string filename)
-        {
-            object[] prms = new object[] { node, outputFolder, filename };
-            return (Exporters.Exporter)_type.InvokeMember(string.Empty, System.Reflection.BindingFlags.CreateInstance, null, null, prms);
-        }
-
-        public Exporters.Exporter Create(Nodes.BehaviorNode node, string outputFolder, string filename, List<string> includedFilenames)
+        public Exporters.Exporter Create(Nodes.BehaviorNode node, string outputFolder, string filename, List<string> includedFilenames = null)
         {
             object[] prms = new object[] { node, outputFolder, filename, includedFilenames };
             return (Exporters.Exporter)_type.InvokeMember(string.Empty, System.Reflection.BindingFlags.CreateInstance, null, null, prms);
@@ -413,13 +400,13 @@ namespace Behaviac.Design
         /// <param name="description">The description which will be shown when the user must select the exporter (s)he wants to use.</param>
         /// <param name="mayExportAll">Determines if this exporter may be used to export multiple behaviours.
         /// This can be important if the output requires further user actions.</param>
-        public ExporterInfo(Type exporter, string id, string description, bool mayExportAll, bool exportToUniqueFile = false)
+        public ExporterInfo(Type exporter, string id, string description, bool mayExportAll, bool hasSettings = false)
         {
             _type = exporter;
             _id = id;
             _description = description;
             _mayExportAll = mayExportAll;
-            _exportToUniqueFile = exportToUniqueFile;
+            _hasSettings = hasSettings;
         }
 
         protected Type _type;
@@ -472,12 +459,12 @@ namespace Behaviac.Design
         }
 
         /// <summary>
-        /// Determines if the exported file should be unique, i.e. cpp, cs.
+        /// Determines if the exported file format has settings
         /// </summary>
-        protected bool _exportToUniqueFile;
-        public bool ExportToUniqueFile
+        protected bool _hasSettings = false;
+        public bool HasSettings
         {
-            get { return _exportToUniqueFile; }
+            get { return _hasSettings; }
         }
     }
 
@@ -500,27 +487,29 @@ namespace Behaviac.Design
         Break
     }
 
-    [Behaviac.Design.EnumDesc("Behaviac.Design.EBTStatus", "函数返回检查类型", "函数返回检查类型选择")]
-    public enum EBTStatus
+    public struct ObjectPair
     {
-        [Behaviac.Design.EnumMemberDesc("BT_INVALID", "Invalid", "无效，表示不采用结果选项（ResultOption），而采用结果函数（ResultFunctor）")]
-        BT_INVALID,
+        public ObjectPair(Nodes.Node root, DefaultObject obj)
+        {
+            Root = root;
+            Obj = obj;
+        }
 
-        [Behaviac.Design.EnumMemberDesc("BT_SUCCESS", "Success", "成功")]
-        BT_SUCCESS,
-
-        [Behaviac.Design.EnumMemberDesc("BT_FAILURE", "Failure", "失败")]
-        BT_FAILURE,
-
-        [Behaviac.Design.EnumMemberDesc("BT_RUNNING", "Running", "正在运行")]
-        BT_RUNNING
-    };
+        public Nodes.Node Root;
+        public DefaultObject Obj;
+    }
 
     /// <summary>
     /// The base class for every plugin. The class name of your plugin must be the same as your library.
     /// </summary>
     public class Plugin
     {
+        public delegate void UpdateMetaStoreDelegate(object dock);
+        public static UpdateMetaStoreDelegate UpdateMetaStoreHandler;
+
+        public delegate void PostSetWorkspaceDelegate();
+        public static PostSetWorkspaceDelegate PostSetWorkspaceHandler;
+
         private static bool _useBasicDisplayName = true;
         public static bool UseBasicDisplayName
         {
@@ -547,18 +536,33 @@ namespace Behaviac.Design
                     AgentDataPool.Clear();
 
                     if (value == EditModes.Connect)
-                        Plugin.UpdateMode = UpdateModes.Continue;
+                    { Plugin.UpdateMode = UpdateModes.Continue; }
+
                     else
-                        Plugin.UpdateMode = UpdateModes.Break;
+                    { Plugin.UpdateMode = UpdateModes.Break; }
                 }
 
                 if (_editMode != value)
                 {
                     EditModes preEditMode = _editMode;
                     _editMode = value;
+
                     if (EditModeHandler != null)
-                        EditModeHandler(preEditMode, value);
+                    { EditModeHandler(preEditMode, value); }
                 }
+            }
+        }
+
+        private static bool wrongWorksapceReported = false;
+        public static bool WrongWorksapceReported
+        {
+            get
+            {
+                return wrongWorksapceReported;
+            }
+            set
+            {
+                wrongWorksapceReported = value;
             }
         }
 
@@ -573,13 +577,14 @@ namespace Behaviac.Design
             set
             {
                 if (value == UpdateModes.Continue)
-                    HighlightBreakPoint.Instance = null;
+                { HighlightBreakPoint.Instance = null; }
 
                 //if (_updateMode != value)
                 {
                     _updateMode = value;
+
                     if (UpdateModeHandler != null)
-                        UpdateModeHandler(value);
+                    { UpdateModeHandler(value); }
                 }
             }
         }
@@ -594,12 +599,26 @@ namespace Behaviac.Design
 
             set
             {
-                if (_debugAgentInstance != value)
+                //if (_debugAgentInstance != value)
                 {
                     _debugAgentInstance = value;
+
                     if (DebugAgentHandler != null)
-                        DebugAgentHandler(value);
+                    { DebugAgentHandler(value); }
                 }
+            }
+        }
+
+        private static FrameStatePool.PlanningProcess _planningProcess;
+        public static FrameStatePool.PlanningProcess PlanningProcess
+        {
+            get
+            {
+                return _planningProcess;
+            }
+            set
+            {
+                _planningProcess = value;
             }
         }
 
@@ -610,16 +629,16 @@ namespace Behaviac.Design
                 resultFunctor.NativeReturnType == "behaviac::EBTStatus")
             {
                 if (method.NativeReturnType == "void")
-                    return (resultFunctor.Params.Count == 0);
+                { return (resultFunctor.Params.Count == 0); }
 
                 return (resultFunctor.Params.Count == 1) &&
-                    (resultFunctor.Params[0].Type == method.ReturnType);
+                       (resultFunctor.Params[0].Type == method.ReturnType);
             }
 
             return false;
         }
 
-        public delegate bool WorkspaceDelegate(string workspacePath, bool bNew, bool bPromptError);
+        public delegate bool WorkspaceDelegate(string workspacePath, bool bNew);
         public static WorkspaceDelegate WorkspaceDelegateHandler;
 
         private static Assembly _DesignerBaseDll = null;
@@ -631,19 +650,22 @@ namespace Behaviac.Design
 
                 Plugin.RegisterTypeHandlers(_DesignerBaseDll);
                 Plugin.RegisterAgentTypes(_DesignerBaseDll);
+
+                Plugin.InitNodeGroups();
+
                 Plugin.RegisterNodeDesc(_DesignerBaseDll);
 
-                Plugin.RegisterTypeName("Tag_Vector2", "Vector2");
-                Plugin.RegisterTypeName("Tag_Vector3", "Vector3");
-                Plugin.RegisterTypeName("Tag_Vector4", "Vector4");
-                Plugin.RegisterTypeName("Tag_Float2", "Vector2");
-                Plugin.RegisterTypeName("Tag_Float3", "Vector3");
-                Plugin.RegisterTypeName("Tag_Float4", "Vector4");
-                Plugin.RegisterTypeName("Tag_Quaternion", "Quaternion");
-                Plugin.RegisterTypeName("Tag_Aabb3", "Aabb3");
-                Plugin.RegisterTypeName("Tag_Ray3", "Ray3");
-                Plugin.RegisterTypeName("Tag_Sphere", "Sphere");
-                Plugin.RegisterTypeName("Angle3F", "Angle3F");
+                //Plugin.RegisterTypeName("Tag_Vector2", "Vector2");
+                //Plugin.RegisterTypeName("Tag_Vector3", "Vector3");
+                //Plugin.RegisterTypeName("Tag_Vector4", "Vector4");
+                //Plugin.RegisterTypeName("Tag_Float2", "Vector2");
+                //Plugin.RegisterTypeName("Tag_Float3", "Vector3");
+                //Plugin.RegisterTypeName("Tag_Float4", "Vector4");
+                //Plugin.RegisterTypeName("Tag_Quaternion", "Quaternion");
+                //Plugin.RegisterTypeName("Tag_Aabb3", "Aabb3");
+                //Plugin.RegisterTypeName("Tag_Ray3", "Ray3");
+                //Plugin.RegisterTypeName("Tag_Sphere", "Sphere");
+                //Plugin.RegisterTypeName("Angle3F", "Angle3F");
             }
         }
 
@@ -663,9 +685,9 @@ namespace Behaviac.Design
             return __loadedPlugins.AsReadOnly();
         }
 
-        public delegate void RegisterPluginDelegate(Assembly assembly, Plugin plugin, object nodeList, bool bAddNodes);
+        public delegate void RegisterPluginDelegate(Assembly assembly, Plugin plugin, ImageList imgList, bool bAddNodes);
 
-        public static void LoadPlugins(RegisterPluginDelegate registerPlugin = null, object nodeList = null, bool bAddNodes = false)
+        public static void LoadPlugins(RegisterPluginDelegate registerPlugin = null, ImageList imgList = null, bool bAddNodes = false)
         {
             // get all the DLL files
             string appDir = Path.GetDirectoryName(Application.ExecutablePath);
@@ -689,7 +711,7 @@ namespace Behaviac.Design
 
                 // skip plugins which are not made for our system
                 if (fileIs32 && is64 || fileIs64 && !is64)
-                    continue;
+                { continue; }
 
                 // load file
                 Assembly assembly = Assembly.LoadFile(Path.GetFullPath(file));
@@ -699,12 +721,23 @@ namespace Behaviac.Design
 
                 // remove system information
                 if (fileIs32 || fileIs64)
-                    classname = classname.Substring(0, classname.Length - 2);
+                { classname = classname.Substring(0, classname.Length - 2); }
 
                 Plugin plugin = (Plugin)assembly.CreateInstance(classname + ".Plugin");
+
                 if (plugin != null && registerPlugin != null)
                 {
-                    registerPlugin(assembly, plugin, nodeList, bAddNodes);
+                    registerPlugin(assembly, plugin, imgList, bAddNodes);
+                }
+
+                if (imgList != null)
+                {
+                    ImageList nodeImageList = imgList as ImageList;
+
+                    foreach (Image image in Plugin.ImagesList)
+                    {
+                        nodeImageList.Images.Add(image);
+                    }
                 }
             }
         }
@@ -724,6 +757,7 @@ namespace Behaviac.Design
 
             string item = "";
             bool bInQuote = false;
+
             for (int i = 0; i < str.Length; ++i)
             {
                 if (str[i] == '\"')
@@ -733,14 +767,17 @@ namespace Behaviac.Design
                         result.Add(item);
                         item = "";
                     }
+
                     if (bInQuote)
                     {
                         bInQuote = false;
+
                     }
                     else
                     {
                         bInQuote = true;
                     }
+
                 }
                 else if (!bInQuote && (str[i] == delimiter))
                 {
@@ -749,6 +786,7 @@ namespace Behaviac.Design
                         result.Add(item);
                         item = "";
                     }
+
                 }
                 else
                 {
@@ -769,6 +807,7 @@ namespace Behaviac.Design
 
             return null;
         }
+
         /// <summary>
         /// Allows a plugin to register the types from an additional assembly.
         /// </summary>
@@ -779,7 +818,7 @@ namespace Behaviac.Design
             Assembly assembly = Assembly.LoadFile(Path.GetFullPath(filename));
 
             if (assembly == null)
-                throw new Exception(Resources.ExceptionAdditionalAssemblyNotLoaded);
+            { throw new Exception(Resources.ExceptionAdditionalAssemblyNotLoaded); }
 
             AddLoadedPlugin(assembly);
 
@@ -799,10 +838,12 @@ namespace Behaviac.Design
         {
             // search base class
             Type type = Type.GetType(fullname);
+
             if (type != null)
-                return type;
+            { return type; }
 
             bool bHasNamespace = false;
+
             if (fullname.IndexOf('.') != -1)
             {
                 bHasNamespace = true;
@@ -814,10 +855,12 @@ namespace Behaviac.Design
                 if (bHasNamespace)
                 {
                     type = assembly.GetType(fullname);
+
                 }
                 else
                 {
                     Type[] assemblyTypes = assembly.GetTypes();
+
                     for (int j = 0; j < assemblyTypes.Length; j++)
                     {
                         if (assemblyTypes[j].Name == fullname)
@@ -829,24 +872,28 @@ namespace Behaviac.Design
                 }
 
                 if (type != null)
-                    return type;
+                { return type; }
             }
 
             // it could be a List<> type
             if (fullname.StartsWith("System.Collections.Generic.List"))
             {
                 int startIndex = fullname.IndexOf("[[");
+
                 if (startIndex > -1)
                 {
                     int endIndex = fullname.IndexOf(",");
+
                     if (endIndex < 0)
                     {
                         endIndex = fullname.IndexOf("]]");
                     }
+
                     if (endIndex > startIndex)
                     {
                         string item = fullname.Substring(startIndex + 2, endIndex - startIndex - 2);
                         type = Plugin.GetType(item);
+
                         if (type != null)
                         {
                             type = typeof(List<>).MakeGenericType(type);
@@ -863,21 +910,22 @@ namespace Behaviac.Design
         {
             // search base class
             Type type = Type.GetType(name);
+
             if (type != null)
-                return type;
+            { return type; }
 
             // search loaded plugins
             foreach (Assembly assembly in __loadedPlugins)
             {
                 string fullname = Path.GetFileNameWithoutExtension(assembly.Location) + name;
                 type = assembly.GetType(fullname);
+
                 if (type != null)
-                    return type;
+                { return type; }
             }
 
             return null;
         }
-
 
         /// <summary>
         /// Returns the types based of a given type. It searches all loaded plugins for this type.
@@ -887,6 +935,7 @@ namespace Behaviac.Design
         public static Type[] GetType(Type baseType)
         {
             List<Type> a = new List<Type>();
+
             // search base class
             if (baseType == null)
             {
@@ -909,7 +958,7 @@ namespace Behaviac.Design
             return a.ToArray();
         }
 
-        private static bool IsASCII(string value)
+        public static bool IsASCII(string value)
         {
             return Encoding.UTF8.GetByteCount(value) == value.Length;
         }
@@ -917,7 +966,9 @@ namespace Behaviac.Design
         public static bool IsValidFilename(string value)
         {
             if (IsASCII(value))
+            {
                 return Regex.IsMatch(value, @"^[a-zA-Z0-9_]*$");
+            }
 
             return false;
         }
@@ -942,32 +993,39 @@ namespace Behaviac.Design
         protected void SetUsedBehaviorNodeType(Type type)
         {
             if (!typeof(Nodes.BehaviorNode).IsAssignableFrom(type) || type.IsAbstract)
-                throw new Exception(Resources.ExceptionBehaviorNodeTypeInvalid);
+            { throw new Exception(Resources.ExceptionBehaviorNodeTypeInvalid); }
 
             __usedBehaviorNodeType = type;
         }
 
         /// <summary>
-        /// The type used to create referenced behaviour nodes. Must implement the interface Nodes.ReferencedBehaviorNode.
+        /// The type used to create referenced behaviour nodes. Must implement the interface Nodes.ReferencedBehavior.
         /// </summary>
         private static Type __usedReferencedBehaviorNodeType = typeof(Nodes.ReferencedBehavior);
 
         /// <summary>
-        /// The type used to create referenced behaviour nodes. Must implement the interface Nodes.ReferencedBehaviorNode.
+        /// The type used to create referenced behaviour nodes. Must implement the interface Nodes.ReferencedBehavior.
         /// </summary>
         public static Type ReferencedBehaviorNodeType
         {
             get { return __usedReferencedBehaviorNodeType; }
         }
 
+        private static Type __fsmReferencedBehaviorNodeType = null;
+        public static Type FSMReferencedBehaviorNodeType
+        {
+            get { return __fsmReferencedBehaviorNodeType; }
+            set { __fsmReferencedBehaviorNodeType = value; }
+        }
+
         /// <summary>
         /// Defines the type used when referenced behaviour nodes are created.
         /// </summary>
-        /// <param name="type">The type used to create referenced behaviour nodes. Must implement Nodes.ReferencedBehaviorNode.</param>
+        /// <param name="type">The type used to create referenced behaviour nodes. Must implement Nodes.ReferencedBehavior.</param>
         protected void SetUsedReferencedBehaviorNodeType(Type type)
         {
-            if (!typeof(Nodes.ReferencedBehaviorNode).IsAssignableFrom(type) || type.IsAbstract)
-                throw new Exception(Resources.ExceptionReferencedBehaviorNodeTypeInvalid);
+            if (!typeof(Nodes.ReferencedBehavior).IsAssignableFrom(type) || type.IsAbstract)
+            { throw new Exception(Resources.ExceptionReferencedBehaviorNodeTypeInvalid); }
 
             __usedReferencedBehaviorNodeType = type;
         }
@@ -994,8 +1052,7 @@ namespace Behaviac.Design
 
             public string displayName_;
             public string desc_;
-        };
-
+        }
 
         private static Dictionary<string, InstanceName_t> _instanceNamesDict = new Dictionary<string, InstanceName_t>();
 
@@ -1014,15 +1071,102 @@ namespace Behaviac.Design
             _instanceNamesDict[instance] = instanceName;
         }
 
-        public static AgentType GetInstanceAgentType(string instance, AgentType selfType = null)
+        public static AgentType GetInstanceAgentType(string instance, Behavior behavior, AgentType selfType)
         {
-            if (instance == VariableDef.kSelf)
-                return selfType;
+            if (!string.IsNullOrEmpty(instance))
+            {
+                // self
+                if (instance == VariableDef.kSelf)
+                    return selfType;
 
-            if (_instanceNamesDict.ContainsKey(instance))
-                return _instanceNamesDict[instance].agentType_;
+                // global instances
+                if (_instanceNamesDict.ContainsKey(instance))
+                    return _instanceNamesDict[instance].agentType_;
+
+                // local instances
+                List<InstanceName_t> instances = GetLocalInstanceNames(behavior);
+                foreach (InstanceName_t instanceName in instances)
+                {
+                    if (instanceName.name_ == instance)
+                        return instanceName.agentType_;
+                }
+            }
 
             return GetAgentType(instance);
+        }
+
+        public static bool IsInstanceName(string instance, Behavior behavior)
+        {
+            if (!string.IsNullOrEmpty(instance))
+            {
+                // global instances
+                if (_instanceNamesDict.ContainsKey(instance))
+                    return true;
+
+                // local instances
+                List<InstanceName_t> instances = GetLocalInstanceNames(behavior);
+                foreach (InstanceName_t instanceName in instances)
+                {
+                    if (instanceName.name_ == instance)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static int InstanceNameIndex(string instance, Behavior behavior)
+        {
+            instance = GetInstanceNameFromClassName(instance);
+
+            // global instances
+            int index = InstanceNames.FindIndex(delegate(InstanceName_t instanceName_t)
+            {
+                return instanceName_t.name_ == instance;
+            });
+
+            if (index >= 0)
+                return index;
+
+            // local instances
+            index = InstanceNames.Count;
+
+            List<InstanceName_t> instances = GetLocalInstanceNames(behavior);
+            foreach (InstanceName_t instanceName in instances)
+            {
+                if (instanceName.name_ == instance)
+                    return index;
+
+                index++;
+            }
+
+            return -1;
+        }
+
+        public static List<InstanceName_t> GetLocalInstanceNames(Behavior behavior)
+        {
+            List<InstanceName_t> instanceNames = new List<InstanceName_t>();
+
+            if (behavior != null && behavior.AgentType != null)
+            {
+                foreach (PropertyDef prop in behavior.AgentType.GetProperties())
+                {
+                    if (Plugin.IsDerived(prop.Type, typeof(Agent)))
+                    {
+                        InstanceName_t instanceName = new InstanceName_t();
+
+                        instanceName.name_ = prop.BasicName;
+                        instanceName.className_ = prop.AgentType.AgentTypeName;
+                        instanceName.agentType_ = Plugin.GetAgentType(prop.Type);
+                        instanceName.displayName_ = prop.DisplayName;
+                        instanceName.desc_ = prop.BasicDescription;
+
+                        instanceNames.Add(instanceName);
+                    }
+                }
+            }
+
+            return instanceNames;
         }
 
         public static string GetInstanceDisplayName(string instance)
@@ -1035,11 +1179,9 @@ namespace Behaviac.Design
 
             AgentType at = GetAgentType(instance);
             if (at != null)
-            {
                 return at.DisplayName;
-            }
 
-            return string.Empty;
+            return instance;
         }
 
         public static string GetInstanceNameFromClassName(string clsName)
@@ -1047,7 +1189,7 @@ namespace Behaviac.Design
             foreach (KeyValuePair<string, InstanceName_t> pair in _instanceNamesDict)
             {
                 if (pair.Value.className_ == clsName)
-                    return pair.Value.name_;
+                { return pair.Value.name_; }
             }
 
             return clsName;
@@ -1056,12 +1198,13 @@ namespace Behaviac.Design
         public static string GetInstanceDesc(string instance)
         {
             if (instance == VariableDef.kSelf)
-                return VariableDef.kSelf;
+            { return VariableDef.kSelf; }
 
             if (_instanceNamesDict.ContainsKey(instance))
-                return _instanceNamesDict[instance].desc_;
+            { return _instanceNamesDict[instance].desc_; }
 
             AgentType at = GetAgentType(instance);
+
             if (at != null)
             {
                 return at.Description;
@@ -1075,7 +1218,7 @@ namespace Behaviac.Design
         {
             List<string> keys = new List<string>(_instanceNamesDict.Keys);
 
-            for (int i = 0; i < keys.Count; ++i )
+            for (int i = 0; i < keys.Count; ++i)
             {
                 string k = keys[i];
                 AgentType at = Plugin.GetAgentType(_instanceNamesDict[k].className_);
@@ -1094,41 +1237,27 @@ namespace Behaviac.Design
         private static List<InstanceName_t> _instanceNames = new List<InstanceName_t>();
         public static List<InstanceName_t> InstanceNames
         {
-            get 
+            get
             {
-                Debug.Check(_instanceNames != null) ;
+                Debug.Check(_instanceNames != null);
 
-                return _instanceNames; 
+                return _instanceNames;
             }
         }
 
-        public static bool IsInstanceAgentType(AgentType type)
+        public static bool IsGlobalInstanceAgentType(AgentType type)
         {
             return _instanceNamesDict.ContainsKey(type.AgentTypeName);
-        }
-
-        public static bool IsInstanceName(string instanceName)
-        {
-            return !string.IsNullOrEmpty(instanceName) && _instanceNamesDict.ContainsKey(instanceName);
-        }
-
-        public static int InstanceNameIndex(string instanceName)
-        {
-            instanceName = GetInstanceNameFromClassName(instanceName);
-
-            return InstanceNames.FindIndex(
-                delegate(InstanceName_t instanceName_t)
-                {
-                    return instanceName_t.name_ == instanceName;
-                });
         }
 
         public static string GetInstanceName(string str)
         {
             int pointIndex = str.IndexOf('.');
+
             if (pointIndex > -1)
             {
                 int parenthesesPos = str.IndexOf('(');
+
                 if (parenthesesPos < 0 || pointIndex < parenthesesPos)
                 {
                     return str.Substring(0, pointIndex);
@@ -1136,6 +1265,19 @@ namespace Behaviac.Design
             }
 
             return string.Empty;
+        }
+
+        private static List<string> _allMetaTypes = new List<string>();
+
+        public static List<string> AllMetaTypes
+        {
+            get
+            {
+                if (!_allMetaTypes.Contains("behaviac::EBTStatus"))
+                    _allMetaTypes.Add("behaviac::EBTStatus");
+
+                return _allMetaTypes;
+            }
         }
 
         public static string GetClassName(string str)
@@ -1146,14 +1288,17 @@ namespace Behaviac.Design
             {
                 //"WorldTest::action1(int AgentBase::Base_Property1)"
                 int posP = str.IndexOf('(');
+
                 if (posP != -1)
                 {
                     int pos = str.LastIndexOf(':', posP);
+
                     if (pos != -1)
                     {
                         Debug.Check(str[pos - 1] == ':');
                         className = str.Substring(0, pos - 1);
                     }
+
                 }
                 else
                 {
@@ -1162,6 +1307,7 @@ namespace Behaviac.Design
                     string[] tokens = str.Split(' ');
 
                     string propertyType, propertyName;
+
                     if (tokens[0] == "static")
                     {
                         Debug.Check(tokens.Length == 3);
@@ -1169,10 +1315,12 @@ namespace Behaviac.Design
                         //e.g. static int Property;
                         propertyType = tokens[1];
                         propertyName = tokens[2];
+
                     }
                     else if (tokens.Length == 1)
                     {
                         propertyName = tokens[0];
+
                     }
                     else
                     {
@@ -1184,6 +1332,7 @@ namespace Behaviac.Design
                     }
 
                     int pos = propertyName.LastIndexOf(':');
+
                     if (pos != -1)
                     {
                         Debug.Check(propertyName[pos - 1] == ':');
@@ -1193,6 +1342,7 @@ namespace Behaviac.Design
             }
 
             int pointIndex = className.IndexOf('.');
+
             if (pointIndex > -1)
             {
                 className = className.Substring(pointIndex + 1, className.Length - pointIndex - 1);
@@ -1201,18 +1351,34 @@ namespace Behaviac.Design
             return className;
         }
 
-        public static bool IsNullValueType(Type type)
+        public static bool IsRefType(Type type)
         {
             if (type != null)
             {
                 if (Plugin.GetAgentType(type.Name) != null)
                     return true;
 
-                if (type.Name == "UnityEngine_GameObject")
+                Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(Behaviac.Design.ClassDescAttribute), false);
+                if (attributes.Length > 0)
+                {
+                    Behaviac.Design.ClassDescAttribute classDesc = (Behaviac.Design.ClassDescAttribute)attributes[0];
+
+                    // All agents should be ref type.
+                    Debug.Check(Plugin.GetAgentType(type.Name) == null || classDesc.IsRefType);
+
+                    return classDesc.IsRefType;
+                }
+
+                if (type.IsInterface)
                     return true;
             }
 
             return false;
+        }
+
+        public static bool IsClassDerived(Type type, Type baseType)
+        {
+            return (type != null) && (baseType != null) && (type == baseType || type.IsSubclassOf(baseType));
         }
 
         private static List<string> _filterNodes = new List<string>();
@@ -1221,28 +1387,67 @@ namespace Behaviac.Design
             get { return _filterNodes; }
         }
 
+        private static bool _onlyShowFrequentlyUsedNodes = false;
+        public static bool OnlyShowFrequentlyUsedNodes
+        {
+            get { return _onlyShowFrequentlyUsedNodes; }
+            set { _onlyShowFrequentlyUsedNodes = value; }
+        }
+
+        private static List<string> _frequentlyUsedNodes = new List<string>();
+        public static List<string> FrequentlyUsedNodes
+        {
+            get { return _frequentlyUsedNodes; }
+        }
+
         private static List<AgentType> _agentTypes = new List<AgentType>();
         public static List<AgentType> AgentTypes
         {
-            get { return _agentTypes; }
+            get
+            {
+                if (_agentTypes.Count == 0)
+                {
+                    AgentType baseAgent = new AgentType(typeof(Agent), "behaviac::Agent", false, false, "behaviac::Agent", "", false);
+                    _agentTypes.Add(baseAgent);
+                }
+
+                return _agentTypes;
+            }
         }
 
         public static AgentType GetAgentType(string typeName)
         {
-            if (Plugin.NamesInNamespace.ContainsKey(typeName))
+            if (!string.IsNullOrEmpty(typeName))
             {
-                typeName = Plugin.NamesInNamespace[typeName];
+                if (Plugin.NamesInNamespace.ContainsKey(typeName))
+                {
+                    typeName = Plugin.NamesInNamespace[typeName];
+                }
+
+                foreach (AgentType at in _agentTypes)
+                {
+                    if (at.AgentTypeName == typeName
+#if BEHAVIAC_NAMESPACE_FIX
+                        || at.AgentTypeName.EndsWith(typeName)
+#endif
+)
+                    {
+                        return at;
+                    }
+                }
             }
 
-            foreach (AgentType at in _agentTypes)
+            return null;
+        }
+
+        public static AgentType GetAgentType(Type type)
+        {
+            if (type != null)
             {
-                if (at.AgentTypeName == typeName
-#if BEHAVIAC_NAMESPACE_FIX                    
-                    || at.AgentTypeName.EndsWith(typeName)
-#endif
-                    )
+                foreach (AgentType at in _agentTypes)
                 {
-                    return at;
+                    if (at.AgentTypeType == type)
+                        return at;
                 }
             }
 
@@ -1264,6 +1469,7 @@ namespace Behaviac.Design
             }
 
             string parentTypeName = _agentTypeHierarchy[childType];
+
             if (parentTypeName == childType)
             {
                 return false;
@@ -1272,9 +1478,31 @@ namespace Behaviac.Design
             return IsAgentDerived(parentTypeName, parentType);
         }
 
+        public static bool IsDerived(Type childType, Type baseType)
+        {
+            if (childType == null || baseType == null)
+                return false;
+
+            Type kObjectType = typeof(Object);
+
+            if (baseType == kObjectType || childType == baseType)
+                return true;
+
+            while (childType != kObjectType)
+            {
+                if (childType == baseType)
+                    return true;
+
+                childType = childType.BaseType;
+            }
+
+            return false;
+        }
+
         public static void UnRegisterAgentTypes()
         {
             _instanceNamesDict.Clear();
+
             if (_instanceNames != null)
             {
                 _instanceNames.Clear();
@@ -1293,23 +1521,28 @@ namespace Behaviac.Design
                 {
                     string fullname = type.Name;
                     bool isInherited = false;
+                    bool isStatic = false;
                     string displayName = type.Name;
                     string description = displayName;
+                    bool isCustomized = false;
 
                     Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(Behaviac.Design.ClassDescAttribute), false);
+
                     if (attributes.Length > 0)
                     {
                         ClassDescAttribute cda = (ClassDescAttribute)attributes[0];
 
                         fullname = cda.Fullname;
                         isInherited = cda.IsInherited;
+                        isStatic = cda.IsStatic;
                         displayName = cda.DisplayName;
-                        description += " " + displayName + "::" + cda.Description;
+                        description = cda.Description;
+                        isCustomized = cda.IsCustomized;
 
                         _agentTypeHierarchy[fullname] = cda.BaseName;
                     }
 
-                    AgentType at = new AgentType(type, fullname, isInherited, displayName, description);
+                    AgentType at = new AgentType(type, fullname, isInherited, isStatic, displayName, description, isCustomized);
                     _agentTypes.Add(at);
                 }
             }
@@ -1318,18 +1551,95 @@ namespace Behaviac.Design
         protected static void RegisterAgentTypes()
         {
             Assembly a = Assembly.GetCallingAssembly();
+
             if (a != _DesignerBaseDll)
             {
                 Plugin.RegisterAgentTypes(a);
             }
         }
 
-        static private Dictionary<string, string> ms_namesInNamespace = new Dictionary<string,string>();
+        static private Dictionary<string, string> ms_namesInNamespace = new Dictionary<string, string>();
         static public Dictionary<string, string> NamesInNamespace
         {
-            get { return ms_namesInNamespace; }
+            get
+            {
+                if (!ms_namesInNamespace.ContainsKey("behaviac_EBTStatus"))
+                    ms_namesInNamespace["behaviac_EBTStatus"] = "behaviac::EBTStatus";
+
+                return ms_namesInNamespace;
+            }
         }
- 
+
+        public static string GetMemberValueTypeName(Type type)
+        {
+            if (type == typeof(void))
+                return "void";
+
+            if (type == typeof(object))
+                return "System::Object";
+
+            foreach (Type key in Plugin.TypeHandlers.Keys)
+            {
+                if (key == type)
+                { return Plugin.GetNativeTypeName(key); }
+            }
+
+            foreach (AgentType at in Plugin.AgentTypes)
+            {
+                if (at.AgentTypeType == type)
+                { return at.DisplayName; }
+            }
+
+            return GetNativeTypeName(type);
+        }
+
+        public static Type GetMemberValueType(string typeName)
+        {
+            if (typeName == "void")
+                return typeof(void);
+
+            if (typeName == "System::Object" || typeName == "Object" || typeName == "object")
+                return typeof(object);
+
+            foreach (Type key in Plugin.TypeHandlers.Keys)
+            {
+                if (Plugin.GetNativeTypeName(key) == typeName)
+                { return key; }
+            }
+
+            foreach (AgentType at in Plugin.AgentTypes)
+            {
+                if (at.DisplayName == typeName)
+                { return at.AgentTypeType; }
+            }
+
+            return null;
+        }
+
+        public static IList<string> GetAllMemberValueTypeNames(bool hasVoid, bool ignoreStatic)
+        {
+            List<string> allTypeNames = new List<string>();
+
+            if (hasVoid)
+            {
+                allTypeNames.Add("void");
+            }
+
+            foreach (Type key in Plugin.TypeHandlers.Keys)
+            {
+                if (key != typeof(System.Collections.IList) && !Plugin.IsArrayType(key))
+                    allTypeNames.Add(Plugin.GetNativeTypeName(key.Name, false, true));
+            }
+
+            foreach (AgentType at in Plugin.AgentTypes)
+            {
+                if (!ignoreStatic || !at.IsStatic)
+                    allTypeNames.Add(at.DisplayName);
+            }
+
+            return allTypeNames.AsReadOnly();
+        }
+
         public static string GetNativeTypeName(Type type, bool bForDisplay = false)
         {
             if (type == null)
@@ -1338,52 +1648,66 @@ namespace Behaviac.Design
             if (Plugin.IsArrayType(type))
             {
                 Type itemType = type.GetGenericArguments()[0];
-                return string.Format("vector<{0}>", Plugin.GetNativeTypeName(itemType, bForDisplay));
+                string itemTypeStr = Plugin.GetNativeTypeName(itemType, bForDisplay);
+
+                //if (!itemTypeStr.EndsWith("*") && Plugin.IsRefType(itemType))
+                //{
+                //    itemTypeStr += "*";
+                //}
+
+                return string.Format("vector<{0}>", itemTypeStr);
             }
 
-            return GetNativeTypeName(type.Name, false, bForDisplay);
+            string typeStr = GetNativeTypeName(type.Name, false, bForDisplay);
+
+            //if (!typeStr.EndsWith("*") && Plugin.IsRefType(type))
+            //{
+            //    typeStr += "*";
+            //}
+
+            return typeStr;
         }
 
-        static Dictionary<string, string> ms_type_mapping = new Dictionary<string, string>()
-        {
-                {"Boolean"          , "bool"}, 
-                {"System.Boolean"   , "bool"}, 
-                {"Int32"            , "int"}, 
-                {"System.Int32"     , "int"}, 
-                {"UInt32"           , "uint"}, 
-                {"System.UInt32"    , "uint"}, 
-                {"Int16"            , "short"}, 
-                {"System.Int16"     , "short"}, 
-                {"UInt16"           , "ushort"}, 
-                {"System.UInt16"    , "ushort"}, 
-                {"Int8"             , "sbyte"}, 
-                {"System.Int8"      , "sbyte"}, 
-                {"SByte"            , "sbyte"}, 
-                {"System.SByte"     , "sbyte"},
-                {"UInt8"            , "ubyte"}, 
-                {"System.UInt8"     , "ubyte"}, 
-                {"Byte"             , "ubyte"}, 
-                {"System.Byte"      , "ubyte"}, 
-                {"Char"             , "char"}, 
-                {"Int64"            , "long"}, 
-                {"System.Int64"     , "long"}, 
-                {"UInt64"           , "ulong"}, 
-                {"System.UInt64"    , "ulong"}, 
-                {"Single"           , "float"}, 
-                {"System.Single"    , "float"}, 
-                {"Double"           , "double"}, 
-                {"System.Double"    , "double"}, 
-                {"String"           , "string"}, 
-                {"System.String"    , "string"}, 
-                {"Void"             , "void"}
+        static Dictionary<string, string> ms_type_mapping = new Dictionary<string, string>() {
+            {"Boolean"          , "bool"},
+            {"System.Boolean"   , "bool"},
+            {"Int32"            , "int"},
+            {"System.Int32"     , "int"},
+            {"UInt32"           , "uint"},
+            {"System.UInt32"    , "uint"},
+            {"Int16"            , "short"},
+            {"System.Int16"     , "short"},
+            {"UInt16"           , "ushort"},
+            {"System.UInt16"    , "ushort"},
+            {"Int8"             , "sbyte"},
+            {"System.Int8"      , "sbyte"},
+            {"SByte"            , "sbyte"},
+            {"System.SByte"     , "sbyte"},
+            {"UInt8"            , "ubyte"},
+            {"System.UInt8"     , "ubyte"},
+            {"Byte"             , "ubyte"},
+            {"System.Byte"      , "ubyte"},
+            {"Char"             , "char"},
+            {"Int64"            , "long"},
+            {"System.Int64"     , "long"},
+            {"UInt64"           , "ulong"},
+            {"System.UInt64"    , "ulong"},
+            {"Single"           , "float"},
+            {"System.Single"    , "float"},
+            {"Double"           , "double"},
+            {"System.Double"    , "double"},
+            {"String"           , "string"},
+            {"System.String"    , "string"},
+            {"Void"             , "void"},
+            {"Behaviac.Designer.llong",  "llong"},
+            {"Behaviac.Designer.ullong", "ullong"}
         };
-
 
         public static string GetNativeTypeName(string typeName, bool withNamespace = false, bool bForDisplay = false)
         {
             if (string.IsNullOrEmpty(typeName))
-                return string.Empty;
-            
+            { return string.Empty; }
+
             foreach (KeyValuePair<string, string> pair in ms_type_mapping)
             {
                 if (pair.Key == typeName)
@@ -1394,13 +1718,16 @@ namespace Behaviac.Design
                     }
 
                     return pair.Value;
+
                 }
                 else
                 {
                     string refType = pair.Key + "&";
+
                     if (refType == typeName)
                     {
                         string ret = pair.Value;
+
                         if (bForDisplay)
                         {
                             ret = pair.Value;
@@ -1410,6 +1737,16 @@ namespace Behaviac.Design
                     }
                 }
             }
+
+            typeName = typeName.Replace("const char*", "cszstring");
+            typeName = typeName.Replace("char*", "szstring");
+            typeName = typeName.Replace("const ", "");
+            typeName = typeName.Replace("unsigned long long", "ullong");
+            typeName = typeName.Replace("signed long long", "llong");
+            typeName = typeName.Replace("long long", "llong");
+            typeName = typeName.Replace("unsigned ", "u");
+            if (!typeName.Contains("signed char"))
+                typeName = typeName.Replace("signed ", "");
 
             if (NamesInNamespace.ContainsKey(typeName))
             {
@@ -1430,7 +1767,7 @@ namespace Behaviac.Design
             }
 
             string[] types = typeName.Split(new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-            return types[types.Length-1];
+            return types[types.Length - 1];
         }
 
         public static Type GetTypeFromName(string typeName)
@@ -1440,19 +1777,20 @@ namespace Behaviac.Design
 
             switch (typeName)
             {
-                case "bool"     : return typeof(bool);
-                case "int"      : return typeof(int);
-                case "uint"     : return typeof(uint);
-                case "short"    : return typeof(short);
-                case "ushort"   : return typeof(ushort);
-                case "char"     : return typeof(char);
-                case "sbyte"    : return typeof(sbyte);
-                case "ubyte"    : return typeof(byte);
-                case "long"     : return typeof(long);
-                case "ulong"    : return typeof(ulong);
-                case "float"    : return typeof(float);
-                case "double"   : return typeof(double);
-                case "string"   : return typeof(string);
+                case "bool": return typeof(bool);
+                case "int": return typeof(int);
+                case "uint": return typeof(uint);
+                case "short": return typeof(short);
+                case "ushort": return typeof(ushort);
+                case "char": return typeof(char);
+                case "sbyte": return typeof(sbyte);
+                case "ubyte": return typeof(byte);
+                case "byte": return typeof(byte);
+                case "long": return typeof(long);
+                case "ulong": return typeof(ulong);
+                case "float": return typeof(float);
+                case "double": return typeof(double);
+                case "string": return typeof(string);
             }
 
             return Plugin.GetType(typeName);
@@ -1471,29 +1809,41 @@ namespace Behaviac.Design
 
             switch (typeName)
             {
-                case "int"      : return true;
-                case "uint"     : return true;
-                case "short"    : return true;
-                case "ushort"   : return true;
-                case "sbyte"    : return true;
-                case "ubyte"    : return true;
-                case "long"     : return true;
-                case "ulong"    : return true;
+                case "int":
+                case "uint":
+                case "short":
+                case "ushort":
+                case "sbyte":
+                case "ubyte":
+                case "long":
+                case "ulong":
+                    return true;
             }
 
             return false;
         }
 
+        public static bool IsIntergerNumberType(Type type)
+        {
+            return type == typeof(int) || type == typeof(uint) ||
+                type == typeof(short) || type == typeof(ushort) ||
+                type == typeof(sbyte) || type == typeof(byte) ||
+                type == typeof(long) || type == typeof(ulong);
+        }
+
         public static ValueTypes GetValueType(Type type)
         {
             if (IsBooleanType(type))
-                return ValueTypes.Bool;
+            { return ValueTypes.Bool; }
 
             if (IsIntergerType32(type))
-                return ValueTypes.Int;
+            { return ValueTypes.Int; }
 
             if (IsFloatType(type))
-                return ValueTypes.Float;
+            { return ValueTypes.Float; }
+
+            if (IsStringType(type))
+            { return ValueTypes.String; }
 
             return ValueTypes.All;
         }
@@ -1502,9 +1852,17 @@ namespace Behaviac.Design
         {
             switch (value)
             {
-                case ValueTypes.Bool    : return typeof(bool);
-                case ValueTypes.Int     : return typeof(int);
-                case ValueTypes.Float   : return typeof(float);
+                case ValueTypes.Bool:
+                    return typeof(bool);
+
+                case ValueTypes.Int:
+                    return typeof(int);
+
+                case ValueTypes.Float:
+                    return typeof(float);
+
+                case ValueTypes.String:
+                    return typeof(String);
             }
 
             return null;
@@ -1550,31 +1908,67 @@ namespace Behaviac.Design
             return type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>);
         }
 
+        public static bool IsExportArray(object v)
+        {
+            bool bExportArray = false;
+
+            if (v != null && Plugin.IsArrayType(v.GetType()))
+            {
+                System.Collections.IList listV = (System.Collections.IList)(v);
+
+                if (listV.Count == 0)
+                {
+                    bExportArray = true;
+                }
+            }
+
+            return bExportArray;
+        }
+
         public static bool IsCustomClassType(Type type)
         {
             return type != null && !type.IsByRef && (type.IsClass || type.IsValueType) && type != typeof(void) && !type.IsEnum && !type.IsPrimitive && !IsStringType(type) && !IsArrayType(type);
         }
 
-
-        public static bool IsCompatibleType(Type filterType, Type typeToFilter)
+        public static bool IsCompatibleType(ValueTypes valueType, Type filterType, Type typeToFilter, bool bArrayType)
         {
             Debug.Check(typeToFilter != null);
 
-            if (filterType == null)
+            if (filterType != null && (filterType.Name == "System_Object" && !Plugin.IsArrayType(typeToFilter)))
             {
                 return true;
             }
 
-            bool bIsArrayFilterType = Plugin.IsArrayType(filterType);
+            if (valueType == ValueTypes.All)
+            {
+                return true;
+            }
+
+            if ((valueType & ValueTypes.Int) == ValueTypes.Int && Plugin.IsIntergerType(typeToFilter) ||
+                (valueType & ValueTypes.Float) == ValueTypes.Float && Plugin.IsFloatType(typeToFilter) ||
+                (valueType & ValueTypes.Bool) == ValueTypes.Float && Plugin.IsBooleanType(typeToFilter) ||
+                (valueType & ValueTypes.String) == ValueTypes.Float && Plugin.IsStringType(typeToFilter)
+                )
+            {
+                return true;
+            }
+
+            if ((valueType & ValueTypes.RefType) == ValueTypes.RefType && Plugin.IsRefType(typeToFilter))
+            {
+                if (filterType == null || Plugin.IsDerived(typeToFilter, filterType))
+                {
+                    return true;
+                }
+            }
 
             bool bCompatible = false;
-            if (bIsArrayFilterType)
+
+            if (bArrayType && Plugin.IsArrayType(typeToFilter))
             {
                 //list of the same type
-                Type filterItemType = filterType.GetGenericArguments()[0];
-                Type parItemType = Plugin.IsArrayType(typeToFilter) ? typeToFilter.GetGenericArguments()[0] : null;
+                Type typeToFilterElement = typeToFilter.GetGenericArguments()[0];
 
-                if (parItemType != null && Plugin.IsCompatibleType(filterItemType, parItemType))
+                if (Plugin.IsCompatibleType(valueType, typeToFilterElement, filterType, false))
                 {
                     bCompatible = true;
                 }
@@ -1583,10 +1977,13 @@ namespace Behaviac.Design
             {
                 bCompatible = true;
             }
+            else if (filterType != null)
+            {
+                bCompatible = Plugin.IsAgentDerived(typeToFilter.Name, filterType.Name);
+            }
             else
             {
-                
-                bCompatible = Plugin.IsAgentDerived(typeToFilter.Name, filterType.Name);
+                bCompatible = (valueType == ValueTypes.All);
             }
 
             return bCompatible;
@@ -1595,23 +1992,28 @@ namespace Behaviac.Design
         public static object CloneValue(object value)
         {
             object clone = value;
+
             if (value != null)
             {
                 if (value is VariableDef)
                 {
                     clone = new VariableDef((VariableDef)value);
+
                 }
                 else if (value is RightValueDef)
                 {
                     clone = ((RightValueDef)value).Clone();
+
                 }
                 else if (value is ParInfo)
                 {
                     clone = new ParInfo((ParInfo)value);
+
                 }
                 else
                 {
                     Type type = value.GetType();
+
                     if (Plugin.IsArrayType(type))
                     {
                         clone = Plugin.CreateInstance(type);
@@ -1622,17 +2024,39 @@ namespace Behaviac.Design
                             object cloneValue = CloneValue(item);
                             listClone.Add(cloneValue);
                         }
+
                     }
                     else if (Plugin.IsCustomClassType(type))
                     {
                         clone = Plugin.CreateInstance(type);
+
                         try
                         {
                             foreach (PropertyInfo property in type.GetProperties())
                             {
-                                object cloneValue = CloneValue(property.GetValue(value, null));
-                                property.SetValue(clone, cloneValue, null);
+                                object cloneValue = property.GetValue(value, null);
+
+                                if (property.PropertyType != type)
+                                {
+                                    cloneValue = CloneValue(cloneValue);
+                                }
+
+                                if (property.CanWrite)
+                                {
+                                    property.SetValue(clone, cloneValue, null);
+
+                                }
+                                else
+                                {
+                                    DesignerProperty[] attributes = (DesignerProperty[])property.GetCustomAttributes(typeof(DesignerProperty), false);
+
+                                    if (attributes.Length > 0)
+                                    {
+                                        Debug.Check(attributes[0].HasFlags(DesignerProperty.DesignerFlags.ReadOnly));
+                                    }
+                                }
                             }
+
                         }
                         catch
                         {
@@ -1648,9 +2072,10 @@ namespace Behaviac.Design
         public static int NewNodeId(Node root)
         {
             if (root == null)
-                return -1;
+            { return -1; }
 
             int id = 0;
+
             while (null != GetObjectById(root, id))
             {
                 ++id;
@@ -1659,54 +2084,72 @@ namespace Behaviac.Design
             return id;
         }
 
-        public static NodeTag.DefaultObject GetObjectById(Node root, int id)
+        public static DefaultObject GetObjectById(Node root, int id)
         {
             if (root == null || root.Id == id)
-                return root;
+            { return root; }
 
             foreach (Attachments.Attachment attach in root.Attachments)
             {
                 if (attach.Id == id)
-                    return attach;
+                { return attach; }
             }
 
             if (!(root is ReferencedBehavior))
             {
                 foreach (Node child in root.Children)
                 {
-                    NodeTag.DefaultObject obj = GetObjectById(child, id);
+                    DefaultObject obj = GetObjectById(child, id);
+
                     if (null != obj)
-                        return obj;
+                    { return obj; }
+                }
+
+                foreach (Node child in root.FSMNodes)
+                {
+                    DefaultObject obj = GetObjectById(child, id);
+
+                    if (null != obj)
+                    { return obj; }
                 }
             }
 
             return null;
         }
 
-        public static NodeTag.DefaultObject GetPreviousObjectById(Node root, int id, NodeTag.DefaultObject currentObj)
+        public static DefaultObject GetPreviousObjectById(Node root, int id, DefaultObject currentObj)
         {
             if (root == null || root == currentObj)
-                return null;
+            { return null; }
 
             if (root.Id == id)
-                return root;
+            { return root; }
 
             foreach (Attachments.Attachment attach in root.Attachments)
             {
                 if (attach == currentObj)
-                    return null;
+                { return null; }
 
                 if (attach.Id == id)
-                    return attach;
+                { return attach; }
             }
 
             if (!(root is ReferencedBehavior))
             {
                 foreach (Node child in root.Children)
                 {
-                    NodeTag.DefaultObject obj = GetPreviousObjectById(child, id, currentObj);
+                    DefaultObject obj = GetPreviousObjectById(child, id, currentObj);
+
                     if (null != obj)
-                        return obj;
+                    { return obj; }
+                }
+
+                foreach (Node child in root.FSMNodes)
+                {
+                    DefaultObject obj = GetPreviousObjectById(child, id, currentObj);
+
+                    if (null != obj)
+                    { return obj; }
                 }
             }
 
@@ -1718,14 +2161,17 @@ namespace Behaviac.Design
             if (instanceNode != null && !string.IsNullOrEmpty(instanceNode.PrefabName))
             {
                 string fullpath = Behaviac.Design.FileManagers.FileManager.GetFullPath(instanceNode.PrefabName);
+
                 if (File.Exists(fullpath))
                 {
                     BehaviorNode behavior = Behaviac.Design.BehaviorManager.Instance.LoadBehavior(fullpath);
+
                     if (behavior != null)
                     {
-                        NodeTag.DefaultObject obj = Plugin.GetObjectById((Node)behavior, instanceNode.PrefabNodeId);
+                        DefaultObject obj = Plugin.GetObjectById((Node)behavior, instanceNode.PrefabNodeId);
+
                         if (obj != null && obj.GetType() == instanceNode.GetType())
-                            return (Node)obj;
+                        { return (Node)obj; }
                     }
                 }
             }
@@ -1739,11 +2185,13 @@ namespace Behaviac.Design
             {
                 string fullpath = Behaviac.Design.FileManagers.FileManager.GetFullPath(instanceAttachment.Node.PrefabName);
                 BehaviorNode behavior = Behaviac.Design.BehaviorManager.Instance.LoadBehavior(fullpath);
+
                 if (behavior != null)
                 {
-                    NodeTag.DefaultObject obj = Plugin.GetObjectById((Node)behavior, instanceAttachment.PrefabAttachmentId);
+                    DefaultObject obj = Plugin.GetObjectById((Node)behavior, instanceAttachment.PrefabAttachmentId);
+
                     if (obj != null && obj.GetType() == instanceAttachment.GetType())
-                        return (Attachments.Attachment)obj;
+                    { return (Attachments.Attachment)obj; }
                 }
             }
 
@@ -1756,26 +2204,28 @@ namespace Behaviac.Design
             foreach (Node.ErrorCheck error in errorChecks)
             {
                 if (errorLevel == error.Level)
-                    errors.Add(error);
+                { errors.Add(error); }
             }
 
             return errors;
         }
 
-        private static Node getNode(NodeTag.DefaultObject obj)
+        private static Node getNode(DefaultObject obj)
         {
             Node node = obj as Node;
+
             if (node == null)
             {
                 Attachments.Attachment attach = obj as Attachments.Attachment;
+
                 if (attach != null)
-                    node = attach.Node;
+                { node = attach.Node; }
             }
 
             return node;
         }
 
-        private static void checkPar(NodeTag.DefaultObject obj, ParInfo par, ref List<Node.ErrorCheck> result)
+        private static void checkPar(DefaultObject obj, ParInfo par, ref List<Node.ErrorCheck> result)
         {
             Node node = getNode(obj);
 
@@ -1787,6 +2237,7 @@ namespace Behaviac.Design
                     try
                     {
                         object value = property.GetValue(obj, null);
+
                         if (value != null)
                         {
                             if (property.PropertyType == typeof(MethodDef))
@@ -1795,7 +2246,8 @@ namespace Behaviac.Design
                                 Debug.Check(method != null);
 
                                 if (method.CheckPar(par))
-                                    result.Add(new Node.ErrorCheck(node, ErrorCheckLevel.Error, "Par as a parameter of the method."));
+                                { result.Add(new Node.ErrorCheck(node, ErrorCheckLevel.Error, "Par as a parameter of the method.")); }
+
                             }
                             else if (property.PropertyType == typeof(VariableDef))
                             {
@@ -1803,7 +2255,8 @@ namespace Behaviac.Design
                                 Debug.Check(var != null);
 
                                 if (var.CheckPar(par))
-                                    result.Add(new Node.ErrorCheck(node, ErrorCheckLevel.Error, "Par as a value."));
+                                { result.Add(new Node.ErrorCheck(node, ErrorCheckLevel.Error, "Par as a value.")); }
+
                             }
                             else if (property.PropertyType == typeof(RightValueDef))
                             {
@@ -1811,9 +2264,10 @@ namespace Behaviac.Design
                                 Debug.Check(rv != null);
 
                                 if (rv.CheckPar(par))
-                                    result.Add(new Node.ErrorCheck(node, ErrorCheckLevel.Error, "Par as a right value."));
+                                { result.Add(new Node.ErrorCheck(node, ErrorCheckLevel.Error, "Par as a right value.")); }
                             }
                         }
+
                     }
                     catch
                     {
@@ -1836,90 +2290,40 @@ namespace Behaviac.Design
                 }
 
                 // children
-                foreach (BaseNode child in node.Children)
+                foreach (BaseNode child in node.GetChildNodes())
                 {
-                    if (child is Node && !(child is ReferencedBehaviorNode))
+                    if (child is Node && !(child is ReferencedBehavior))
                     {
                         Node childNode = child as Node;
                         CheckPar(childNode, par, ref result);
                     }
                 }
+
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, Resources.LoadError, MessageBoxButtons.OK);
             }
         }
 
-        private static void resetPar(NodeTag.DefaultObject obj, ParInfo par, string newName)
+        public static bool CheckTwoTypes(Type type1, Type type2)
         {
-            Node node = getNode(obj);
+            if (type1 == type2)
+                return true;
 
-            if (node != null && par != null)
-            {
-                Type type = obj.GetType();
-                foreach (PropertyInfo property in type.GetProperties())
-                {
-                    try
-                    {
-                        object value = property.GetValue(obj, null);
-                        if (value != null)
-                        {
-                            if (property.PropertyType == typeof(MethodDef))
-                            {
-                                MethodDef method = value as MethodDef;
-                                Debug.Check(method != null);
+            if (type1 == typeof(llong))
+                return type2 == typeof(long);
 
-                                method.ResetPar(par, newName);
-                            }
-                            else if (property.PropertyType == typeof(VariableDef))
-                            {
-                                VariableDef var = value as VariableDef;
-                                Debug.Check(var != null);
+            if (type2 == typeof(llong))
+                return type1 == typeof(long);
 
-                                var.ResetPar(par, newName);
-                            }
-                            else if (property.PropertyType == typeof(RightValueDef))
-                            {
-                                RightValueDef rv = value as RightValueDef;
-                                Debug.Check(rv != null);
+            if (type1 == typeof(ullong))
+                return type2 == typeof(ulong);
 
-                                rv.ResetPar(par, newName);
-                            }
-                        }
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-        }
+            if (type2 == typeof(ullong))
+                return type1 == typeof(ulong);
 
-        public static void ResetPar(Node node, ParInfo par, string newName)
-        {
-            try
-            {
-                // self
-                resetPar(node, par, newName);
-
-                // attachment
-                foreach (Attachments.Attachment attach in node.Attachments)
-                {
-                    resetPar(attach, par, newName);
-                }
-
-                foreach (BaseNode child in node.Children)
-                {
-                    if (child is Node && !(child is ReferencedBehaviorNode))
-                    {
-                        Node childNode = child as Node;
-                        ResetPar(childNode, par, newName);
-                    }
-                }
-            }
-            catch
-            {
-            }
+            return false;
         }
 
         public delegate void SetValue(object obj);
@@ -1941,6 +2345,7 @@ namespace Behaviac.Design
                 Debug.Check(createMethod != null);
 
                 return createMethod.Invoke(null, new object[0]);
+
             }
             else if (type.IsEnum)
             {
@@ -1952,10 +2357,12 @@ namespace Behaviac.Design
                 }
 
                 return null;
+
             }
             else if (IsCustomClassType(type) || IsArrayType(type))
             {
                 return Activator.CreateInstance(type);
+
             }
             else
             {
@@ -1964,7 +2371,7 @@ namespace Behaviac.Design
             }
         }
 
-        public static bool InvokeTypeParser(Type type, string parStr, SetValue setter, NodeTag.DefaultObject node, string paramName = null)
+        public static bool InvokeTypeParser(List<Nodes.Node.ErrorCheck> result, Type type, string parStr, SetValue setter, DefaultObject node, string paramName = null)
         {
             Debug.Check(type != null);
 
@@ -1983,6 +2390,7 @@ namespace Behaviac.Design
                 object[] pars = { node, paramName, parStr, setter };
 
                 return (bool)parserMethod.Invoke(null, pars);
+
             }
             else if (type.IsEnum)
             {
@@ -1991,24 +2399,28 @@ namespace Behaviac.Design
                 foreach (object enumVal in values)
                 {
                     string enumValueName = Enum.GetName(type, enumVal);
+
                     if (enumValueName == parStr)
                     {
                         setter(enumVal);
                         return true;
                     }
                 }
+
             }
             else if (Plugin.IsArrayType(type))
             {
-                object obj = DesignerArray.ParseStringValue(type, parStr, node);
+                object obj = DesignerArray.ParseStringValue(result, type, parStr, node);
                 setter(obj);
                 return true;
+
             }
             else if (Plugin.IsCustomClassType(type))
             {
-                object obj = Behaviac.Design.Attributes.DesignerStruct.ParseStringValue(type, paramName, parStr, node);
+                object obj = Behaviac.Design.Attributes.DesignerStruct.ParseStringValue(result, type, paramName, parStr, node);
                 setter(obj);
                 return true;
+
             }
             else
             {
@@ -2031,26 +2443,34 @@ namespace Behaviac.Design
                 object[] pars = { category, name, type, rangeMin, rangeMax };
 
                 return (Behaviac.Design.Attributes.DesignerProperty)method.Invoke(null, pars);
+
             }
             else if (Plugin.IsArrayType(type))
             {
                 Type itemType = type.GetGenericArguments()[0];
+
                 if (Plugin.IsBooleanType(itemType))
-                    return new DesignerArrayBoolean(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport);
+                { return new DesignerArrayBoolean(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport); }
+
                 else if (Plugin.IsIntergerType(itemType))
-                    return new DesignerArrayInteger(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport);
+                { return new DesignerArrayInteger(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport); }
+
                 else if (Plugin.IsFloatType(itemType))
-                    return new DesignerArrayFloat(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport);
+                { return new DesignerArrayFloat(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport); }
+
                 else if (Plugin.IsStringType(itemType) || Plugin.IsCharType(itemType))
-                    return new DesignerArrayString(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport);
+                { return new DesignerArrayString(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport); }
+
                 else if (Plugin.IsEnumType(itemType))
-                    return new DesignerArrayEnum(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport);
+                { return new DesignerArrayEnum(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport); }
+
                 else if (Plugin.IsCustomClassType(itemType))
-                    return new DesignerArrayStruct(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport);
+                { return new DesignerArrayStruct(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport); }
+
             }
             else
             {
-                if (type.IsSubclassOf(typeof(Agent)))
+                if (type == typeof(object) || type.IsSubclassOf(typeof(Agent)))
                 {
                     return new DesignerArrayInteger(name, "", category, DesignerProperty.DisplayMode.Parameter, 0, DesignerProperty.DesignerFlags.NoExport);
                 }
@@ -2069,17 +2489,20 @@ namespace Behaviac.Design
                 MethodInfo method = typeHandler.GetMethod("GetEditorType");
                 Debug.Check(method != null);
 
-                object[] pars = {};
+                object[] pars = { };
 
                 return (Type)method.Invoke(null, pars);
+
             }
             else if (type.IsEnum)
             {
                 return typeof(Behaviac.Design.Attributes.DesignerEnumEditor);
+
             }
             else if (IsCustomClassType(type) || IsArrayType(type))
             {
                 return typeof(Behaviac.Design.Attributes.DesignerCompositeEditor);
+
             }
             else
             {
@@ -2091,7 +2514,7 @@ namespace Behaviac.Design
         public static object DefaultValue(Type type, string defaultValue = "")
         {
             if (type == null)
-                return null;
+            { return null; }
 
             if (_typeHandlers.ContainsKey(type))
             {
@@ -2103,6 +2526,7 @@ namespace Behaviac.Design
                 object[] pars = { defaultValue };
 
                 return method.Invoke(null, pars);
+
             }
             else if (type.IsEnum)
             {
@@ -2111,6 +2535,7 @@ namespace Behaviac.Design
                 foreach (object enumVal in values)
                 {
                     string enumValueName = Enum.GetName(type, enumVal);
+
                     if (enumValueName == defaultValue)
                     {
                         return enumVal;
@@ -2118,19 +2543,27 @@ namespace Behaviac.Design
                 }
 
                 return null;
+
             }
             else if (IsArrayType(type))
             {
                 return Activator.CreateInstance(type);
+
             }
             else
             {
-                if (type.IsSubclassOf(typeof(Agent)))
+                if (type == typeof(Agent) || type.IsSubclassOf(typeof(Agent)))
                 {
-                    //AgentType defaultAgentType = new AgentType(type, false, "", "");
-                    //return defaultAgentType;
-
                     return Activator.CreateInstance(type);
+                    //return null;
+                }
+
+                if (Plugin.IsArrayType(type) || type == typeof(System.Collections.IList))
+                    return null;
+
+                if (type == typeof(object) || Plugin.IsDerived(type, typeof(Agent)) || type.Name == "AgentType")
+                {
+                    return null;
                 }
 
                 string message = string.Format("DefaultValue for {0} is not registered!", type.Name);
@@ -2152,6 +2585,7 @@ namespace Behaviac.Design
             foreach (Type typeHandler in types)
             {
                 Attribute[] attributes = (Attribute[])typeHandler.GetCustomAttributes(typeof(Behaviac.Design.TypeHandlerAttribute), false);
+
                 if (attributes.Length > 0)
                 {
                     TypeHandlerAttribute parserTypeAttr = attributes[0] as TypeHandlerAttribute;
@@ -2173,13 +2607,14 @@ namespace Behaviac.Design
         protected static void RegisterTypeHandlers()
         {
             Assembly a = Assembly.GetCallingAssembly();
+
             if (a != _DesignerBaseDll)
             {
                 Plugin.RegisterTypeHandlers(a);
             }
         }
 
-        private static Dictionary<string, string> ms_typeNameMap = new Dictionary<string,string>();
+        private static Dictionary<string, string> ms_typeNameMap = new Dictionary<string, string>();
 
 
         /// <summary>
@@ -2214,6 +2649,7 @@ namespace Behaviac.Design
         }
 
         protected static List<NodeGroup> _nodeGroups = new List<NodeGroup>();
+        protected static List<NodeGroup> _frequentlyUsedNodeGroups = new List<NodeGroup>();
 
         public static void InitNodeGroups()
         {
@@ -2249,30 +2685,117 @@ namespace Behaviac.Design
             get { return _nodeGroups.AsReadOnly(); }
         }
 
+        public static IList<NodeGroup> FrequentlyUsedNodeGroups
+        {
+            get { return _frequentlyUsedNodeGroups.AsReadOnly(); }
+        }
+
         public static bool IsQueryFiltered
         {
             get
             {
                 //only filter query not in vc
-                return !System.Diagnostics.Debugger.IsAttached && FilterNodes.Contains("PluginBehaviac.Nodes.Query");
+                //return !System.Diagnostics.Debugger.IsAttached && FilterNodes.Contains("PluginBehaviac.Nodes.Query");
+
+                return FilterNodes.Contains("PluginBehaviac.Nodes.Query");
             }
         }
 
-        public static List<Image> RegisterNodeDesc(Assembly a, int iconCount = 0)
+        private static void initFrequentlyUsedNodeGroup()
         {
-            List<Image> nodeImages = new List<Image>();
+            _frequentlyUsedNodeGroups.Clear();
 
+            NodeGroup group = new NodeGroup(Resources.Attachments, NodeIcon.FolderClosed, null);
+            _frequentlyUsedNodeGroups.Add(group);
+
+            group = new NodeGroup(Resources.Conditions, NodeIcon.FolderClosed, null);
+            _frequentlyUsedNodeGroups.Add(group);
+
+            group = new NodeGroup(Resources.Actions, NodeIcon.FolderClosed, null);
+            _frequentlyUsedNodeGroups.Add(group);
+
+            group = new NodeGroup(Resources.Composites, NodeIcon.FolderClosed, null);
+            _frequentlyUsedNodeGroups.Add(group);
+
+            group = new NodeGroup(Resources.Decorators, NodeIcon.FolderClosed, null);
+            _frequentlyUsedNodeGroups.Add(group);
+        }
+
+        private static void copyNodeItems(NodeGroup source, NodeGroup target)
+        {
+            foreach (NodeItem nodeItem in source.Items)
+            {
+                if (nodeItem.Type != null && Plugin.FrequentlyUsedNodes.Contains(nodeItem.Type.FullName))
+                {
+                    target.Items.Add(nodeItem);
+                }
+            }
+
+            foreach (NodeGroup nodeGroup in source.Children)
+            {
+                copyNodeItems(nodeGroup, target);
+            }
+        }
+
+        public static void SetFrequentlyUsedNodeGroups()
+        {
+            initFrequentlyUsedNodeGroup();
+
+            foreach (NodeGroup nodeGroup in _nodeGroups)
+            {
+                NodeGroup group = null;
+                foreach (NodeGroup fuNodeGroup in _frequentlyUsedNodeGroups)
+                {
+                    if (fuNodeGroup.Name == nodeGroup.Name)
+                    {
+                        group = fuNodeGroup;
+                        break;
+                    }
+                }
+
+                if (group == null)
+                {
+                    group = new NodeGroup(nodeGroup.Name, nodeGroup.Icon, null);
+                    _frequentlyUsedNodeGroups.Add(group);
+                }
+
+                copyNodeItems(nodeGroup, group);
+            }
+
+            // clear the empty group
+            for (int g = 0; g < _frequentlyUsedNodeGroups.Count; g++)
+            {
+                if (_frequentlyUsedNodeGroups[g].Children.Count == 0 &&
+                    _frequentlyUsedNodeGroups[g].Items.Count == 0)
+                {
+                    _frequentlyUsedNodeGroups.RemoveAt(g);
+                    g--;
+                }
+            }
+        }
+
+        private static List<Image> _nodeImages = new List<Image>();
+        public static List<Image> ImagesList
+        {
+            get
+            {
+                return _nodeImages;
+            }
+        }
+
+        public static void RegisterNodeDesc(Assembly a, int iconCount = 0)
+        {
             Type[] types = a.GetTypes();
             foreach (Type type in types)
             {
-                // to skip it if not in vc and confiured in the filter nodes
-                // if in vc, don't skip any
-                if (!System.Diagnostics.Debugger.IsAttached && FilterNodes.Contains(type.FullName))
+                // to skip it if confiured in the filter nodes
+                if (FilterNodes.Contains(type.FullName))
                 {
                     continue;
                 }
 
                 Attribute[] attributes = (Attribute[])type.GetCustomAttributes(typeof(Behaviac.Design.NodeDescAttribute), false);
+
                 if (attributes.Length > 0)
                 {
                     NodeDescAttribute nodeDescAttr = attributes[0] as NodeDescAttribute;
@@ -2283,16 +2806,22 @@ namespace Behaviac.Design
                     for (int i = 0; i < nameTree.Length; ++i)
                     {
                         string name = Resources.ResourceManager.GetString(nameTree[i], Resources.Culture);
+
                         if (string.IsNullOrEmpty(name))
-                            name = nameTree[i];
+                        { name = nameTree[i]; }
 
                         NodeGroup group = GetNodeGroup(curNodeGroups, name);
+
                         if (group == null)
                         {
                             group = new NodeGroup(name, NodeIcon.FolderClosed, curGroup);
+
                             if (curGroup == null)
+                            {
                                 curNodeGroups.Add(group);
+                            }
                         }
+
                         curGroup = group;
                         curNodeGroups = group.Children;
                     }
@@ -2301,28 +2830,27 @@ namespace Behaviac.Design
                     {
                         NodeIcon icon = nodeDescAttr.Icon;
                         Image image = GetResourceImage(nodeDescAttr.ImageName);
+
                         if (image != null)
                         {
-                            nodeImages.Add(image);
-                            icon = (NodeIcon)(iconCount + nodeImages.Count - 1);
+                            _nodeImages.Add(image);
+                            icon = (NodeIcon)(iconCount + _nodeImages.Count - 1);
                         }
 
                         curGroup.Items.Add(new NodeItem(type, icon));
                     }
                 }
             }
-
-            return nodeImages;
         }
 
-        protected static void RegisterNodeDesc()
-        {
-            Assembly a = Assembly.GetCallingAssembly();
-            if (a != _DesignerBaseDll)
-            {
-                RegisterNodeDesc(a);
-            }
-        }
+        //protected static void RegisterNodeDesc()
+        //{
+        //    Assembly a = Assembly.GetCallingAssembly();
+        //    if (a != _DesignerBaseDll)
+        //    {
+        //        RegisterNodeDesc(a);
+        //    }
+        //}
 
         private static NodeGroup GetNodeGroup(IList<NodeGroup> nodeGroups, string groupName)
         {
@@ -2362,7 +2890,7 @@ namespace Behaviac.Design
             for (int i = 0; i < Plugin.Exporters.Count; ++i)
             {
                 if (Plugin.Exporters[i].ID == format || Plugin.Exporters[i].Description == desc)
-                    return i;
+                { return i; }
             }
 
             return -1;
@@ -2391,7 +2919,7 @@ namespace Behaviac.Design
         public static void AddResourceManager(ResourceManager manager)
         {
             if (!__resources.Contains(manager))
-                __resources.Add(manager);
+            { __resources.Add(manager); }
         }
 
         /// <summary>
@@ -2402,13 +2930,21 @@ namespace Behaviac.Design
         public static string GetResourceString(string name)
         {
             if (string.IsNullOrEmpty(name))
-                return string.Empty;
+            { return string.Empty; }
 
             for (int i = __resources.Count - 1; i >= 0; --i)
             {
-                string val = __resources[i].GetString(name, Resources.Culture);
-                if (val != null)
-                    return val;
+                try
+                {
+                    string val = __resources[i].GetString(name, Resources.Culture);
+
+                    if (val != null)
+                    { return val; }
+
+                }
+                catch (Exception)
+                {
+                }
             }
 
             return name;
@@ -2417,16 +2953,203 @@ namespace Behaviac.Design
         public static Image GetResourceImage(string name)
         {
             if (string.IsNullOrEmpty(name))
-                return null;
+            { return null; }
 
             for (int i = __resources.Count - 1; i >= 0; --i)
             {
-                object obj = __resources[i].GetObject(name, Resources.Culture);
-                if (obj != null && obj is Image)
-                    return (Image)obj;
+                try
+                {
+                    object obj = __resources[i].GetObject(name, Resources.Culture);
+
+                    if (obj != null && obj is Image)
+                    { return (Image)obj; }
+
+                }
+                catch (Exception)
+                {
+                }
             }
 
             return null;
+        }
+
+        public static void GetObjectsBySelfPropertyMethod(Nodes.Node root, DefaultObject obj, string propertyName, bool matchCase, bool matchWholeWord, ref List<ObjectPair> objects)
+        {
+            if (root == null || string.IsNullOrEmpty(propertyName))
+            { return; }
+
+            if (!ContainObjectPair(objects, root, obj))
+            {
+                bool found = false;
+
+                // search from its members
+                Type type = obj.GetType();
+                foreach (System.Reflection.PropertyInfo property in type.GetProperties())
+                {
+                    Attribute[] attributes = (Attribute[])property.GetCustomAttributes(typeof(Behaviac.Design.Attributes.DesignerProperty), false);
+
+                    if (attributes == null || attributes.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        object value = property.GetValue(obj, null);
+
+                        if (value != null)
+                        {
+                            if (property.PropertyType == typeof(MethodDef))
+                            {
+                                MethodDef method = value as MethodDef;
+                                Debug.Check(method != null);
+
+                                if (CompareTwoTypes(method.Name, propertyName, matchCase, matchWholeWord) ||
+                                    CompareTwoTypes(method.DisplayName, propertyName, matchCase, matchWholeWord) ||
+                                    CompareTwoTypes(method.GetDisplayValue(), propertyName, matchCase, matchWholeWord) ||
+                                    CompareTwoTypes(method.GetExportValue(), propertyName, matchCase, matchWholeWord))
+                                {
+                                    found = true;
+                                    break;
+                                }
+
+                            }
+                            else if (property.PropertyType == typeof(VariableDef))
+                            {
+                                VariableDef var = value as VariableDef;
+                                Debug.Check(var != null);
+
+                                if (CompareTwoTypes(var.GetDisplayValue(), propertyName, matchCase, matchWholeWord) ||
+                                    CompareTwoTypes(var.GetExportValue(), propertyName, matchCase, matchWholeWord))
+                                {
+                                    found = true;
+                                    break;
+                                }
+
+                            }
+                            else if (property.PropertyType == typeof(RightValueDef))
+                            {
+                                RightValueDef rv = value as RightValueDef;
+                                Debug.Check(rv != null);
+
+                                if (CompareTwoTypes(rv.GetDisplayValue(), propertyName, matchCase, matchWholeWord) ||
+                                    CompareTwoTypes(rv.GetExportValue(), propertyName, matchCase, matchWholeWord))
+                                {
+                                    found = true;
+                                    break;
+                                }
+
+                            }
+                            else if (CompareTwoTypes(value.ToString(), propertyName, matchCase, matchWholeWord))
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+
+                // search from its pars
+                if (!found)
+                {
+                    if (obj is Behavior)
+                    {
+                        foreach (ParInfo par in ((Behavior)obj).LocalVars)
+                        {
+                            if (CompareTwoTypes(par.Name, propertyName, matchCase, matchWholeWord))
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (found)
+                {
+                    objects.Add(new ObjectPair(root, obj));
+                }
+            }
+        }
+
+        public static bool ContainObjectPair(List<ObjectPair> objects, Nodes.Node root, DefaultObject obj)
+        {
+            foreach (ObjectPair objPair in objects)
+            {
+                if (objPair.Root == root && objPair.Obj == obj)
+                { return true; }
+            }
+
+            return false;
+        }
+
+        public static bool CompareTwoObjectLists(List<ObjectPair> listA, List<ObjectPair> listB)
+        {
+            Debug.Check(listA != null && listB != null);
+
+            if (listA.Count != listB.Count)
+            { return false; }
+
+            foreach (ObjectPair obj in listB)
+            {
+                if (!ContainObjectPair(listA, obj.Root, obj.Obj))
+                { return false; }
+            }
+
+            return true;
+        }
+
+        public static bool CompareTwoTypes(string strA, string strB, bool matchCase, bool matchWholeWord)
+        {
+            if (matchWholeWord)
+            {
+                if (matchCase)
+                {
+                    if (strA == strB || Plugin.GetResourceString(strA) == strB)
+                    { return true; }
+
+                }
+                else
+                {
+                    strB = strB.ToLower();
+
+                    if (strA.ToLower() == strB)
+                    { return true; }
+
+                    strA = Plugin.GetResourceString(strA);
+
+                    if (strA.ToLower() == strB)
+                    { return true; }
+                }
+
+            }
+            else
+            {
+                if (matchCase)
+                {
+                    if (strA.Contains(strB) || Plugin.GetResourceString(strA).Contains(strB))
+                    { return true; }
+
+                }
+                else
+                {
+                    strB = strB.ToLower();
+
+                    if (strA.ToLower().Contains(strB))
+                    { return true; }
+
+                    strA = Plugin.GetResourceString(strA);
+
+                    if (strA.ToLower().Contains(strB))
+                    { return true; }
+                }
+            }
+
+            return false;
         }
     }
 }

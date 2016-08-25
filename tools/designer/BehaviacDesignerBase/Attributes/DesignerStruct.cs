@@ -32,39 +32,39 @@ namespace Behaviac.Design.Attributes
         /// <param name="displayOrder">Defines the order the properties will be sorted in when shown in the property grid. Lower come first.</param>
         /// <param name="flags">Defines the designer flags stored for the property.</param>
         public DesignerStruct(string displayName, string description, string category, DisplayMode displayMode, int displayOrder, DesignerFlags flags)
-            : base(displayName, description, category, displayMode, displayOrder, flags, typeof(DesignerCompositeEditor), null)
-        {
+            : base(displayName, description, category, displayMode, displayOrder, flags, typeof(DesignerCompositeEditor), null) {
         }
 
-        public override string GetDisplayValue(object obj)
-        {
+        public override string GetDisplayValue(object obj) {
             return RetrieveDisplayValue(obj, null, null);
         }
 
-        public override string GetExportValue(object owner, object obj)
-        {
+        public override string GetExportValue(object owner, object obj) {
             return RetrieveExportValue(obj, null, null, false);
         }
 
-        public override string GetSaveValue(object owner, object obj)
-        {
+        public override string GetSaveValue(object owner, object obj) {
             return RetrieveExportValue(obj, null, null, true);
         }
 
-        public override object FromStringValue(NodeTag.DefaultObject node, object parentObject, Type type, string str)
+        public override object FromStringValue(List<Nodes.Node.ErrorCheck> result, DefaultObject node, object parentObject, Type type, string str)
         {
             if (Plugin.IsCustomClassType(type))
-                return ParseStringValue(type, null, str, node);
+            { 
+                return ParseStringValue(result, type, null, str, node); 
+            }
+            else if (Plugin.IsArrayType(type))
+            {
+                return DesignerArray.ParseStringValue(result, type, str, node);
+            }
 
             throw new Exception(Resources.ExceptionDesignerAttributeInvalidType);
         }
 
-        public static string RetrieveDisplayValue(object obj, object parent, string paramName, int indexInArray = -1)
-        {
+        public static string RetrieveDisplayValue(object obj, object parent, string paramName, int indexInArray = -1) {
             string str = RetrieveExportValue(obj, parent, paramName, false, indexInArray);
 
-            if (str.Length > 25)
-            {
+            if (str.Length > 25) {
                 str = str.Substring(0, 20);
                 str += "...}";
             }
@@ -83,78 +83,96 @@ namespace Behaviac.Design.Attributes
             return str;
         }
 
-        public static string RetrieveExportValue(object obj, object parent, string paramName, bool bSave, int indexInArray = -1)
-        {
+        public static string RetrieveExportValue(object obj, object parent, string paramName, bool bSave, int indexInArray = -1) {
             string str = "";
 
             Debug.Check(obj != null);
 
             Type type = obj.GetType();
 
-            if (Plugin.IsNullValueType(type))
-            {
+            if (Plugin.IsRefType(type))
                 return "null";
-            }
 
             bool bStructAsBasic = Plugin.IsRegisteredTypeName(type.Name);
 
-            //struct as basic type, like Tag::Vector3, etc. 
+            //struct as basic type, like Tag::Vector3, etc.
             //these types are exported as (W=0 X=0 Y=0 Z=0)
-            if (!bSave && bStructAsBasic)
-            {
+            if (!bSave && bStructAsBasic) {
                 str = "(";
-            }
-            else
-            {
+
+            } else {
                 str = "{";
             }
 
-            if (Plugin.IsCustomClassType(type))
-            {
+            if (Plugin.IsCustomClassType(type)) {
                 MethodDef method = parent as MethodDef;
 
                 bool bFirst = true;
 
                 IList<DesignerPropertyInfo> properties = DesignerProperty.GetDesignerProperties(type);
-                foreach (DesignerPropertyInfo property in properties)
-                {
-                    if (!property.Attribute.HasFlags(DesignerProperty.DesignerFlags.NoSave))
-                    {
-                        if (!bSave && bStructAsBasic && !bFirst)
-                        {
+                foreach(DesignerPropertyInfo property in properties) {
+                    if (!property.Attribute.HasFlags(DesignerProperty.DesignerFlags.NoSave)) {
+                        if (!bSave && bStructAsBasic && !bFirst) {
                             str += " ";
                         }
 
                         bFirst = false;
 
-                        if (!bSave)
-                        {
+                        if (!bSave) {
                             if (bStructAsBasic)
-                                str += property.Property.Name + "=";
-                        }
-                        else
-                        {
+                            { str += property.Property.Name + "="; }
+
+                        } else {
                             str += property.Property.Name + "=";
                         }
 
                         object member = property.GetValue(obj);
-                        if (property.Attribute is DesignerStruct)
+
+                        Type memberType = member.GetType();
+
+                        if (Plugin.IsArrayType(memberType))
                         {
-                            str += RetrieveExportValue(member, parent, paramName, bSave);
+                            str += DesignerArray.RetrieveExportValue(member);
                         }
                         else
                         {
-                            bool bStructProperty = false;
-                            if (method != null)
+                            if (property.Attribute is DesignerStruct)
                             {
-                                MethodDef.Param param = method.GetParam(paramName, property, indexInArray);
-                                if (param != null)
+                                str += RetrieveExportValue(member, parent, paramName, bSave);
+                            }
+                            else
+                            {
+                                bool bStructProperty = false;
+
+                                if (method != null)
                                 {
-                                    bStructProperty = true;
-                                    string s = param.GetExportValue(null);
-                                    if (Plugin.IsStringType(param.Value.GetType()))
+                                    MethodDef.Param param = method.GetParam(paramName, property, indexInArray);
+
+                                    if (param != null)
+                                    {
+                                        bStructProperty = true;
+                                        string s = param.GetExportValue(null);
+
+                                        if (Plugin.IsStringType(param.Value.GetType()))
+                                        {
+                                            str += string.Format("\"{0}\"", s);
+
+                                        }
+                                        else
+                                        {
+                                            str += s;
+                                        }
+                                    }
+                                }
+
+                                if (!bStructProperty)
+                                {
+                                    string s = property.GetExportValue(obj);
+
+                                    if (Plugin.IsStringType(property.Property.PropertyType))
                                     {
                                         str += string.Format("\"{0}\"", s);
+
                                     }
                                     else
                                     {
@@ -162,75 +180,54 @@ namespace Behaviac.Design.Attributes
                                     }
                                 }
                             }
-
-                            if (!bStructProperty)
-                            {
-                                string s = property.GetExportValue(obj);
-                                if (Plugin.IsStringType(property.Property.PropertyType))
-                                {
-                                    str += string.Format("\"{0}\"", s);
-                                }
-                                else
-                                {
-                                    str += s;
-                                }
-                            }
                         }
 
-                        if (!bSave && bStructAsBasic)
-                        {
-                        }
-                        else
-                        {
+                        if (!bSave && bStructAsBasic) {
+                        } else {
                             str += ";";
                         }
                     }
                 }
-            }
-            else
-            { 
+
+            } else {
             }
 
-            if (!bSave && bStructAsBasic)
-            {
+            if (!bSave && bStructAsBasic) {
                 str += ")";
-            }
-            else
-            {
+
+            } else {
                 str += "}";
             }
 
             return str;
         }
 
-        public static bool IsPureConstDatum(object obj, object parent, string paramName)
-        {
+        public static bool IsPureConstDatum(object obj, object parent, string paramName) {
             Debug.Check(obj != null);
 
             Type type = obj.GetType();
-            Debug.Check(Plugin.IsCustomClassType(type));
+            if (!Plugin.IsCustomClassType(type))
+            {
+                return false;
+            }
 
             MethodDef method = parent as MethodDef;
             IList<DesignerPropertyInfo> properties = DesignerProperty.GetDesignerProperties(type);
-            foreach (DesignerPropertyInfo property in properties)
-            {
-                if (!property.Attribute.HasFlags(DesignerProperty.DesignerFlags.NoSave))
-                {
+            foreach(DesignerPropertyInfo property in properties) {
+                if (!property.Attribute.HasFlags(DesignerProperty.DesignerFlags.NoSave)) {
                     object member = property.GetValue(obj);
-                    if (property.Attribute is DesignerStruct)
-                    {
+
+                    if (property.Attribute is DesignerStruct) {
                         if (!IsPureConstDatum(member, parent, paramName))
-                            return false;
-                    }
-                    else
-                    {
-                        if (method != null)
-                        {
+                        { return false; }
+
+                    } else {
+                        if (method != null) {
                             MethodDef.Param param = method.GetParam(paramName, property);
-                            if (param != null)
-                            {
+
+                            if (param != null) {
                                 if (!param.IsPureConstDatum)
-                                    return false;
+                                { return false; }
                             }
                         }
                     }
@@ -240,41 +237,35 @@ namespace Behaviac.Design.Attributes
             return true;
         }
 
-        public static object ParseStringValue(Type type, string paramName, string str, NodeTag.DefaultObject node)
+        public static object ParseStringValue(List<Nodes.Node.ErrorCheck> result, Type type, string paramName, string str, DefaultObject node)
         {
             Debug.Check(Plugin.IsCustomClassType(type));
 
             object obj = Plugin.CreateInstance(type);
-            parseStringValue(node, obj, type, paramName, str, 0, str.Length - 1);
+            parseStringValue(result, node, obj, type, paramName, str, 0, str.Length - 1);
 
             return obj;
         }
 
-        private static int getProperty(string str, int startIndex, int endIndex, out string propertyName, out string propertyValue)
-        {
+        private static int getProperty(string str, int startIndex, int endIndex, out string propertyName, out string propertyValue) {
             propertyName = string.Empty;
             propertyValue = string.Empty;
 
-            for (int i = startIndex; i <= endIndex; ++i)
-            {
-                if (str[i] == '=')
-                {
+            for (int i = startIndex; i <= endIndex; ++i) {
+                if (str[i] == '=') {
                     propertyName = str.Substring(startIndex, i - startIndex);
 
                     int brackets = 0;
-                    for (int k = i + 1; k <= endIndex; ++k)
-                    {
-                        if (str[k] == '{')
-                        {
+
+                    for (int k = i + 1; k <= endIndex; ++k) {
+                        if (str[k] == '{') {
                             brackets++;
-                        }
-                        else if (str[k] == '}')
-                        {
+
+                        } else if (str[k] == '}') {
                             Debug.Check(brackets > 0);
                             brackets--;
-                        }
-                        else if (str[k] == ';' && brackets == 0)
-                        {
+
+                        } else if (str[k] == ';' && brackets == 0) {
                             propertyValue = str.Substring(i + 1, k - i - 1);
                             break;
                         }
@@ -287,14 +278,11 @@ namespace Behaviac.Design.Attributes
             return -1;
         }
 
-        private static bool getPropertyInfo(Type type, string propertyName, out DesignerPropertyInfo p)
-        {
+        private static bool getPropertyInfo(Type type, string propertyName, out DesignerPropertyInfo p) {
             IList<DesignerPropertyInfo> properties = DesignerProperty.GetDesignerProperties(type);
-            foreach (DesignerPropertyInfo property in properties)
-            {
+            foreach(DesignerPropertyInfo property in properties) {
                 if (!property.Attribute.HasFlags(DesignerProperty.DesignerFlags.NoSave) &&
-                    property.Property.Name == propertyName)
-                {
+                    property.Property.Name == propertyName) {
                     p = property;
                     return true;
                 }
@@ -305,24 +293,21 @@ namespace Behaviac.Design.Attributes
             return false;
         }
 
-        private static void parseStringValue(NodeTag.DefaultObject node, object obj, Type type, string paramName, string str, int startIndex, int endIndex)
+        private static void parseStringValue(List<Nodes.Node.ErrorCheck> result, DefaultObject node, object obj, Type type, string paramName, string str, int startIndex, int endIndex)
         {
             string propertyName = string.Empty;
             string propertyValue = string.Empty;
 
-            try
-            {
+            try {
                 if (startIndex >= endIndex)
-                    return;
+                { return; }
 
-                if (!string.IsNullOrEmpty(str))
-                {
-                    if (startIndex < str.Length && str[startIndex] == '{')
-                    {
+                if (!string.IsNullOrEmpty(str)) {
+                    if (startIndex < str.Length && str[startIndex] == '{') {
                         startIndex++;
 
                         if (endIndex < str.Length && str[endIndex] == '}')
-                            endIndex--;
+                        { endIndex--; }
                     }
                 }
 
@@ -333,82 +318,79 @@ namespace Behaviac.Design.Attributes
                 //    Debug.Check(true);
                 //}
 
-                if (valueIndex >= 0)
-                {
+                if (valueIndex >= 0) {
                     Debug.Check(!string.IsNullOrEmpty(propertyName));
 
                     DesignerPropertyInfo property;
 
-                    if (getPropertyInfo(type, propertyName, out property))
-                    {
+                    if (getPropertyInfo(type, propertyName, out property)) {
                         // Primitive type
-                        if (string.IsNullOrEmpty(propertyValue) || propertyValue[0] != '{')
-                        {
+                        if (string.IsNullOrEmpty(propertyValue) || propertyValue[0] != '{') {
                             MethodDef.Param parParam = null;
                             Nodes.Action action = node as Nodes.Action;
-                            if (action != null)
-                            {
+
+                            if (action != null) {
                                 MethodDef method = action.Method;
-                                if (method != null)
-                                {
-                                    parParam = method.GetParam(paramName, type, obj, property);
+
+                                if (method != null) {
+                                    string pn = "";
+                                    if (paramName == null)
+                                    {
+                                        pn = propertyName;
+                                    }
+
+                                    parParam = method.GetParam(pn, type, obj, property);
                                 }
                             }
 
                             bool bParamFromStruct = false;
                             string[] tokens = Plugin.Split(propertyValue, ' ');
 
-                            if (tokens != null && tokens.Length > 1)
-                            {
+                            if (tokens != null && tokens.Length > 1) {
                                 //par
-                                if (parParam != null)
-                                {
+                                if (parParam != null) {
                                     int propertyNameIndex = 1;
-                                    if (tokens.Length == 2)
-                                    {
+
+                                    if (tokens.Length == 2) {
                                         propertyNameIndex = 1;
-                                    }
-                                    else if (tokens.Length == 3)
-                                    {
+
+                                    } else if (tokens.Length == 3) {
                                         Debug.Check(tokens[0] == "static");
                                         propertyNameIndex = 2;
-                                    }
-                                    else
-                                    {
+
+                                    } else {
                                         Debug.Check(false);
                                     }
-                                    parParam.Value = DesignerMethodEnum.setParameter(node, tokens[propertyNameIndex]);
+
+                                    parParam.Value = DesignerMethodEnum.setParameter(result, node, tokens[propertyNameIndex]);
                                     bParamFromStruct = true;
                                 }
                             }
 
-                            if (!bParamFromStruct)
-                            {
-                                property.SetValueFromString(obj, propertyValue, node);
+                            if (!bParamFromStruct) {
+                                property.SetValueFromString(result, obj, propertyValue, node);
 
-                                if (parParam != null)
-                                {
+                                if (parParam != null && parParam.Value == null) {
                                     parParam.Value = property.GetValue(obj);
                                 }
                             }
                         }
+
                         // Struct type
-                        else
-                        {
+                        else {
                             object member = property.GetValue(obj);
                             Debug.Check(member != null);
 
                             string structStr = str.Substring(valueIndex + 1, propertyValue.Length - 2);
-                            parseStringValue(node, member, member.GetType(), paramName, structStr, 0, structStr.Length - 1);
+                            parseStringValue(result, node, member, member.GetType(), paramName, structStr, 0, structStr.Length - 1);
                         }
                     }
 
                     // Parse next property
-                    parseStringValue(node, obj, type, paramName, str, valueIndex + propertyValue.Length + 1, str.Length - 1);
+                    parseStringValue(result, node, obj, type, paramName, str, valueIndex + propertyValue.Length + 1, str.Length - 1);
                 }
-            }
-            catch(Exception ex)
-            {
+
+            } catch (Exception ex) {
                 string msg = string.Format("{0}\n{1}:{2}", ex.Message, propertyName, propertyValue);
                 MessageBox.Show(msg, Resources.LoadError, MessageBoxButtons.OK);
             }

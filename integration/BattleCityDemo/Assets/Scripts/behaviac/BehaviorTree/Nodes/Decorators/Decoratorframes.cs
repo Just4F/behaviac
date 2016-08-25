@@ -11,45 +11,41 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace behaviac
 {
     public class DecoratorFrames : DecoratorNode
     {
-        public DecoratorFrames()
-        {
-		}
-        ~DecoratorFrames()
-        {
-            this.m_frames_var = null;
-        }
-
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
 
-            foreach (property_t p in properties)
+            for (int i = 0; i < properties.Count; ++i)
             {
-                if (p.name == "Time")
+                property_t p = properties[i];
+                if (p.name == "Frames")
                 {
-                    string typeName = null;
-                    string propertyName = null;
-                    this.m_frames_var = Condition.LoadRight(p.value, propertyName, ref typeName);
+                    int pParenthesis = p.value.IndexOf('(');
+
+                    if (pParenthesis == -1)
+                    {
+                        this.m_frames = AgentMeta.ParseProperty(p.value);
+                    }
+                    else
+                    {
+                        this.m_frames = AgentMeta.ParseMethod(p.value);
+                    }
                 }
             }
         }
 
         protected virtual int GetFrames(Agent pAgent)
         {
-            if (this.m_frames_var != null)
+            if (this.m_frames != null)
             {
-                Debug.Check(this.m_frames_var != null);
-                int frames = (int)this.m_frames_var.GetValue(pAgent);
-
-                return frames;
+                Debug.Check(this.m_frames is CInstanceMember<int>);
+                return ((CInstanceMember<int>)this.m_frames).GetValue(pAgent);
             }
 
             return 0;
@@ -62,18 +58,10 @@ namespace behaviac
             return pTask;
         }
 
-        Property m_frames_var;
+        protected IInstanceMember m_frames;
 
-        class DecoratorFramesTask : DecoratorTask
+        private class DecoratorFramesTask : DecoratorTask
         {
-            public DecoratorFramesTask()
-            {
-            }
-
-            ~DecoratorFramesTask()
-            {
-            }
-
             public override void copyto(BehaviorTask target)
             {
                 base.copyto(target);
@@ -105,7 +93,7 @@ namespace behaviac
             {
                 base.onenter(pAgent);
 
-                this.m_start = 0;
+                this.m_start = Workspace.Instance.FrameSinceStartup;
                 this.m_frames = this.GetFrames(pAgent);
 
                 return (this.m_frames >= 0);
@@ -113,8 +101,7 @@ namespace behaviac
 
             protected override EBTStatus decorate(EBTStatus status)
             {
-                this.m_start += (int)(Workspace.GetDeltaFrames());
-                if (this.m_start >= this.m_frames)
+                if (Workspace.Instance.FrameSinceStartup - this.m_start + 1 >= this.m_frames)
                 {
                     return EBTStatus.BT_SUCCESS;
                 }
@@ -122,7 +109,7 @@ namespace behaviac
                 return EBTStatus.BT_RUNNING;
             }
 
-            int GetFrames(Agent pAgent)
+            private int GetFrames(Agent pAgent)
             {
                 Debug.Check(this.GetNode() is DecoratorFrames);
                 DecoratorFrames pNode = (DecoratorFrames)(this.GetNode());
@@ -130,8 +117,8 @@ namespace behaviac
                 return pNode != null ? pNode.GetFrames(pAgent) : 0;
             }
 
-            int m_start;
-            int m_frames = 0;
+            private int m_start = 0;
+            private int m_frames = 0;
         }
     }
 }

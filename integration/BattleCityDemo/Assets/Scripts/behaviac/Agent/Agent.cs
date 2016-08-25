@@ -3,55 +3,45 @@
 //
 // Copyright (C) 2015 THL A29 Limited, a Tencent company. All rights reserved.
 //
-// Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
+// Licensed under the BSD 3-Clause License (the "License"); you may not use this file except in
+// compliance with the License. You may obtain a copy of the License at http://opensource.org/licenses/BSD-3-Clause
 //
-// Unless required by applicable law or agreed to in writing, software distributed under the License is
-// distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and limitations under the License.
+// Unless required by applicable law or agreed to in writing, software distributed under the License
+// is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+// or implied. See the License for the specific language governing permissions and limitations under
+// the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.ComponentModel;
 using System.Globalization;
-
+using System.IO;
 using UnityEngine;
 
 namespace behaviac
 {
-    //[Behaviac.Design.ClassDesc("Agent", "Agent", true, "Agent", "Agent")]
+    [behaviac.TypeMetaInfo()]
     public class Agent : MonoBehaviour
     {
         #region State
+
         public class State_t
         {
             protected Variables m_vars = new Variables();
+
             public Variables Vars
             {
-                get
-                {
-                    return this.m_vars;
-                }
+                get { return this.m_vars; }
             }
 
             protected BehaviorTreeTask m_bt;
+
             public BehaviorTreeTask BT
             {
-                get
-                {
-                    return m_bt;
-                }
-                set
-                {
-                    m_bt = value;
-                }
-            }
-
-            public State_t()
-            {
+                get { return m_bt; }
+                set { m_bt = value; }
             }
 
             public State_t(State_t c)
@@ -67,17 +57,10 @@ namespace behaviac
                 }
             }
 
-            ~State_t()
-            {
-                this.Clear();
-            }
-
-            public void Clear()
-            {
-                this.m_vars.Clear();
-
-                this.m_bt = null;
-            }
+            //~State_t()
+            //{
+            //    this.Clear(true);
+            //}
 
             public bool SaveToFile(string fileName)
             {
@@ -113,86 +96,75 @@ namespace behaviac
                 return false;
             }
         }
-        #endregion
+
+        #endregion State
 
         protected void Init()
         {
-            Init_(this.m_contextId, this, this.m_priority, this.name);
+            Awake();
         }
 
-        //protected Agent()
-        //{
-        //}
-
-        //~Agent()
-        //{
-        //    behaviac.Debug.LogWarning("Agent.Finalizer");
-        //}
+        void Awake()
+        {
+            Init_(this.m_contextId, this, this.m_priority);
 
 #if !BEHAVIAC_RELEASE
-		static Dictionary<string, Agent> ms_agents = new Dictionary<string, Agent>();
-		public static Agent GetAgent(string agentName)
-		{
-			Agent pAgent = Agent.GetInstance(agentName);
-			if (!System.Object.ReferenceEquals(pAgent, null))
-			{
-				return pAgent;
-			}
+            this.SetName(this.name);
+            this._members.Clear();
+#endif
+        }
 
-			if (ms_agents.ContainsKey(agentName))
-			{
-				Agent pA = ms_agents[agentName];
-				return pA;
-			}
+#if !BEHAVIAC_RELEASE
+        private static Dictionary<string, Agent> ms_agents = new Dictionary<string, Agent>();
 
-			return null;
-		}
+        public static Agent GetAgent(string agentName)
+        {
+            Agent pAgent = Agent.GetInstance(agentName);
+
+            if (!System.Object.ReferenceEquals(pAgent, null))
+            {
+                return pAgent;
+            }
+
+            if (ms_agents.ContainsKey(agentName))
+            {
+                Agent pA = ms_agents[agentName];
+                return pA;
+            }
+
+            return null;
+        }
 #endif//BEHAVIAC_RELEASE
-
 
         protected void OnDestroy()
         {
-            this.UnSubsribeToNetwork();
-
 #if !BEHAVIAC_RELEASE
-			string agentClassName = this.GetClassTypeName();
-			string agentInstanceName = this.GetName();
-			
-			string aName = string.Format("{0}#{1}", agentClassName, agentInstanceName);
+            string agentClassName = this.GetClassTypeName();
+            string agentInstanceName = this.GetName();
 
-			ms_agents.Remove(aName);
+            string aName = string.Format("{0}#{1}", agentClassName, agentInstanceName);
+
+            ms_agents.Remove(aName);
 #endif
 
-            if (this.m_contextId >= 0)
-            {
-                Context c = Context.GetContext(this.m_contextId);
-                World pWorld = c.GetWorld(false);
-                if (!System.Object.ReferenceEquals(pWorld, null) && !System.Object.ReferenceEquals(pWorld, this))
-                {
-                    pWorld.RemoveAgent(this);
-                }
-            }
+            Context.RemoveAgent(this);
 
             if (this.m_behaviorTreeTasks != null)
             {
-				for (int i = 0; i < this.m_behaviorTreeTasks.Count; ++i)
+                for (int i = 0; i < this.m_behaviorTreeTasks.Count; ++i)
                 {
-					BehaviorTreeTask bt = this.m_behaviorTreeTasks[i];
-					Workspace.DestroyBehaviorTreeTask(bt, this);
+                    BehaviorTreeTask bt = this.m_behaviorTreeTasks[i];
+                    Workspace.Instance.DestroyBehaviorTreeTask(bt, this);
                 }
 
                 this.m_behaviorTreeTasks.Clear();
                 this.m_behaviorTreeTasks = null;
             }
-            if (this.m_eventInfos != null)
-            {
-                this.m_eventInfos.Clear();
-                this.m_eventInfos = null;
-            }
         }
 
-        List<BehaviorTreeTask> m_behaviorTreeTasks;
-        List<BehaviorTreeTask> BehaviorTreeTasks
+        private List<BehaviorTreeTask> m_behaviorTreeTasks;
+
+        private List<BehaviorTreeTask> BehaviorTreeTasks
         {
             get
             {
@@ -205,22 +177,23 @@ namespace behaviac
             }
         }
 
+        private class BehaviorTreeStackItem_t
+        {
+            public BehaviorTreeTask bt;
+            public TriggerMode triggerMode;
+            public bool triggerByEvent;
 
-		class BehaviorTreeStackItem_t
-		{
-			public BehaviorTreeTask	bt;
-			public TriggerMode triggerMode;
-			public bool triggerByEvent;
-
-			public BehaviorTreeStackItem_t(BehaviorTreeTask bt_, TriggerMode tm, bool bByEvent){
+            public BehaviorTreeStackItem_t(BehaviorTreeTask bt_, TriggerMode tm, bool bByEvent)
+            {
                 bt = bt_;
                 triggerMode = tm;
-				triggerByEvent = bByEvent;
-			}
-		}
+                triggerByEvent = bByEvent;
+            }
+        }
 
-        List<BehaviorTreeStackItem_t> m_btStack;
-        List<BehaviorTreeStackItem_t> BTStack
+        private List<BehaviorTreeStackItem_t> m_btStack;
+
+        private List<BehaviorTreeStackItem_t> BTStack
         {
             get
             {
@@ -233,12 +206,34 @@ namespace behaviac
             }
         }
 
-        BehaviorTreeTask m_currentBT;
+        private BehaviorTreeTask m_currentBT;
+        public BehaviorTreeTask CurrentBT
+        {
+            get { return m_currentBT; }
+            private set
+            {
+                m_currentBT = value;
+                m_excutingTreeTask = m_currentBT;
+            }
+        }
 
-        int m_id = -1;
-        bool m_bActive = true;
+        private BehaviorTreeTask m_excutingTreeTask;
+        public BehaviorTreeTask ExcutingTreeTask
+        {
+            get 
+            { 
+                return m_excutingTreeTask; 
+            }
+            set 
+            { 
+                m_excutingTreeTask = value; 
+            }
+        }
 
-		bool m_referencetree = false;
+        private int m_id = -1;
+        private bool m_bActive = true;
+
+        private bool m_referencetree = false;
 
         public int m_priority;
         public int m_contextId;
@@ -258,8 +253,8 @@ namespace behaviac
             return this.GetType().FullName;
         }
 
-		static uint ms_idMask = 0xffffffff;
-		uint m_idFlag = 0xffffffff;
+        private static uint ms_idMask = 0xffffffff;
+        private uint m_idFlag = 0xffffffff;
 
         /**
         Each agent can be assigned to an id flag by 'SetIdFlag'. A global mask can be specified by SetIdMask.
@@ -267,6 +262,7 @@ namespace behaviac
 
         @sa SetIdFlag SetIdMask
         */
+
         public bool IsMasked()
         {
             return (this.m_idFlag & Agent.IdMask()) != 0;
@@ -275,6 +271,7 @@ namespace behaviac
         /**
         @sa SetIdMask IsMasked
         */
+
         public void SetIdFlag(uint idMask)
         {
             this.m_idFlag = idMask;
@@ -299,10 +296,10 @@ namespace behaviac
             return bIsDerived;
         }
 
-
         /**
         @sa SetIdFlag IsMasked
         */
+
         public static void SetIdMask(uint idMask)
         {
             ms_idMask = idMask;
@@ -314,34 +311,25 @@ namespace behaviac
         }
 
 #if !BEHAVIAC_RELEASE
-		private string m_debug_name;
+        private string m_debug_name;
 #endif
 
         public string GetName()
         {
 #if !BEHAVIAC_RELEASE
-			return this.m_debug_name;
+            if (!string.IsNullOrEmpty(this.m_debug_name))
+            {
+                return this.m_debug_name;
+            }
+
+            return this.name;
 #else
-			return this.name;
+            return this.name;
 #endif
         }
 
-        Variables m_variables;
-        Variables Variables
-        {
-            get
-            {
-                if (m_variables == null)
-                {
-                    m_variables = new Variables();
-                }
-
-                return m_variables;
-            }
-        }
-
-        static int ms_agent_index;
-        static Dictionary<string, int> ms_agent_type_index;
+        private static int ms_agent_index;
+        private static Dictionary<string, int> ms_agent_type_index;
 
         public void SetName(string instanceName)
         {
@@ -351,6 +339,7 @@ namespace behaviac
                 string typeFullName = this.GetType().FullName;
                 string typeName = null;
                 int pIt = typeFullName.LastIndexOf(':');
+
                 if (pIt != -1)
                 {
                     typeName = typeFullName.Substring(pIt + 1);
@@ -383,7 +372,7 @@ namespace behaviac
             }
 
 #if !BEHAVIAC_RELEASE
-			this.m_debug_name = this.name.Replace(" ", "_");
+            this.m_debug_name = this.name.Replace(" ", "_");
 #endif
         }
 
@@ -400,6 +389,7 @@ namespace behaviac
 
         @sa SetActive
         */
+
         public bool IsActive()
         {
             return this.m_bActive;
@@ -408,32 +398,29 @@ namespace behaviac
         /**
         set the agent active or inactive
         */
-        void SetActive(bool bActive)
+
+        public void SetActive(bool bActive)
         {
             this.m_bActive = bActive;
         }
 
-		public void SetVariableRegistry(CMemberBase pMember, string variableName, object value, string staticClassName, uint variableId)
+#if BEHAVIAC_USE_HTN
+        private int m_planningTop = -1;
+
+        internal int PlanningTop
         {
-            bool bValidName = !string.IsNullOrEmpty(variableName);
-
-            if (bValidName)
+            get
             {
-                if (!string.IsNullOrEmpty(staticClassName))
-                {
-                    int contextId = this.GetContextId();
-                    Context c = Context.GetContext(contextId);
-
-					c.SetStaticVariable(pMember, variableName, value, staticClassName, variableId);
-                }
-                else
-                {
-					this.Variables.Set(this, pMember, variableName, value, variableId);
-                }
+                return this.m_planningTop;
+            }
+            set
+            {
+                this.m_planningTop = value;
             }
         }
+#endif//
 
-        public struct AgentName_t
+        internal struct AgentName_t
         {
             public string instantceName_;
             public string className_;
@@ -441,7 +428,7 @@ namespace behaviac
             public string desc_;
 
             public AgentName_t(string instanceName, string className,
-                string displayName, string desc)
+                               string displayName, string desc)
             {
                 instantceName_ = instanceName;
                 className_ = className;
@@ -474,9 +461,9 @@ namespace behaviac
             }
         }
 
-
         private static Dictionary<string, AgentName_t> ms_names;
-        public static Dictionary<string, AgentName_t> Names
+
+        internal static Dictionary<string, AgentName_t> Names
         {
             get
             {
@@ -484,35 +471,15 @@ namespace behaviac
                 {
                     ms_names = new Dictionary<string, AgentName_t>();
                 }
+
                 return ms_names;
             }
         }
 
-        //return true if 'agentClassName' is an agent class name or agent derived class name
-        //IsAgentClassName is different from IsRegistered that IsRegistered only returns true for those classes directly registered by 'Register'
-        //IsAgentClassName also returns true for those base classes.
-        public static bool IsAgentClassName(CStringID agentClassId)
-        {
-            if (Agent.Metas.ContainsKey(agentClassId))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        public static bool IsAgentClassName(string agentClassName)
-        {
-            CStringID agentClassId = new CStringID(agentClassName);
-
-            bool bResult = IsAgentClassName(agentClassId);
-
-            return bResult;
-        }
         ///////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////
         /**
-        A name can be bound to an instance. before a name is bound to an instance, that name has to be registered by 'RegisterName'
+        A name can be bound to an instance. before a name is bound to an instance, that name has to be registered by 'RegisterInstanceName'
 
         @param agentInstanceName
         the specified name to be used to access an instance of type 'TAGENT' or its derivative.
@@ -520,9 +487,12 @@ namespace behaviac
 
         @sa CreateInstance
         */
-        public static bool RegisterName<TAGENT>(string agentInstanceName, string displayName, string desc) where TAGENT : Agent
+        public static bool RegisterInstanceName<TAGENT>(string agentInstanceName, string displayName, string desc) where TAGENT : Agent
         {
+            Debug.Check(string.IsNullOrEmpty(agentInstanceName) || !agentInstanceName.Contains(" "));
+
             string agentInstanceNameAny = agentInstanceName;
+
             if (string.IsNullOrEmpty(agentInstanceNameAny))
             {
                 agentInstanceNameAny = typeof(TAGENT).FullName;
@@ -539,36 +509,37 @@ namespace behaviac
             return false;
         }
 
-        public static bool RegisterName<TAGENT>(string agentInstanceName) where TAGENT : Agent
+        public static bool RegisterInstanceName<TAGENT>(string agentInstanceName) where TAGENT : Agent
         {
-            return Agent.RegisterName<TAGENT>(agentInstanceName, null, null);
+            return Agent.RegisterInstanceName<TAGENT>(agentInstanceName, null, null);
         }
 
-        public static bool RegisterName<TAGENT>() where TAGENT : Agent
+        public static bool RegisterInstanceName<TAGENT>() where TAGENT : Agent
         {
-            return Agent.RegisterName<TAGENT>(null, null, null);
+            return Agent.RegisterInstanceName<TAGENT>(null, null, null);
         }
 
-		public static bool RegisterStaticClass(Type type, string displayName, string desc)
-		{
-			Debug.Check(Utils.IsStaticType(type));
+        public static bool RegisterStaticClass(Type type, string displayName, string desc)
+        {
+            Debug.Check(Utils.IsStaticType(type));
 
-			string agentInstanceNameAny = type.FullName;
+            string agentInstanceNameAny = type.FullName;
 
-			if (!Agent.Names.ContainsKey(agentInstanceNameAny))
-			{
-				Agent.Names[agentInstanceNameAny] = new AgentName_t(agentInstanceNameAny, agentInstanceNameAny, displayName, desc);
-				Utils.AddStaticClass(type);
+            if (!Agent.Names.ContainsKey(agentInstanceNameAny))
+            {
+                Agent.Names[agentInstanceNameAny] = new AgentName_t(agentInstanceNameAny, agentInstanceNameAny, displayName, desc);
+                Utils.AddStaticClass(type);
 
-				return true;
-			}
-			
-			return false;
-		}
+                return true;
+            }
 
-        public static void UnRegisterName<TAGENT>(string agentInstanceName) where TAGENT : Agent
+            return false;
+        }
+
+        public static void UnRegisterInstanceName<TAGENT>(string agentInstanceName) where TAGENT : Agent
         {
             string agentInstanceNameAny = agentInstanceName;
+
             if (string.IsNullOrEmpty(agentInstanceNameAny))
             {
                 agentInstanceNameAny = typeof(TAGENT).FullName;
@@ -580,16 +551,18 @@ namespace behaviac
             }
         }
 
-        public static void UnRegisterName<TAGENT>() where TAGENT : Agent
+        public static void UnRegisterInstanceName<TAGENT>() where TAGENT : Agent
         {
-            Agent.UnRegisterName<TAGENT>(null);
+            Agent.UnRegisterInstanceName<TAGENT>(null);
         }
 
-        /**
-		return if 'agentInstanceName' is registerd.
 
-		@sa RegisterName
-		*/
+        /**
+        return if 'agentInstanceName' is registerd.
+
+        @sa RegisterInstanceName
+        */
+
         public static bool IsNameRegistered(string agentInstanceName)
         {
             return Names.ContainsKey(agentInstanceName);
@@ -598,11 +571,11 @@ namespace behaviac
         /**
         return the registered class name
 
-        @sa RegisterName
+        @sa RegisterInstanceName
         */
+
         public static string GetRegisteredClassName(string agentInstanceName)
         {
-
             if (Names.ContainsKey(agentInstanceName))
             {
                 return Names[agentInstanceName].ClassName;
@@ -611,160 +584,14 @@ namespace behaviac
             return null;
         }
 
-#if BEHAVIAC_UNITY_CREATE
         /**
-                create an Agent with type 'TAGENT', with priority and agentInstanceName as name
-
-                higher priority are ticked earlier
-
-                @contextId
-                by default, it is 0
-
-                @sa Destroy
-        */
-        public static TAGENT Create<TAGENT>(string agentInstanceName, int contextId, short priority) where TAGENT : Agent, new()
-        {
-            string agentInstanceNameAny = agentInstanceName;
-            if (agentInstanceNameAny.IsNullOrEmpty())
-            {
-                agentInstanceNameAny = typeof(TAGENT).Name;
-            }
-
-            Debug.Check(!Agent.IsNameRegistered(agentInstanceNameAny), "a registered name should be created by CreateInstance");
-
-            //TAGENT should be derived from Agent
-            GameObject go = new GameObject();
-            Agent pAgent = go.AddComponent<TAGENT>();
-
-            Debug.Check(!Object.ReferenceEquals(pAgent, null) && typeof(TAGENT).IsSubclassOf(typeof(Agent)));
-
-            //string agentClassName = typeof(TAGENT).Name;
-            Init_(contextId, pAgent, priority, agentInstanceName);
-            Debug.Check(pAgent is TAGENT);
-            TAGENT pA = pAgent as TAGENT;
-
-            return pA;
-        }
-
-        public static TAGENT Create<TAGENT>(string agentInstanceName, int contextId) where TAGENT : Agent, new()
-        {
-            return Agent.Create<TAGENT>(agentInstanceName, contextId, 0);
-        }
-
-        public static TAGENT Create<TAGENT>() where TAGENT : Agent, new()
-        {
-            return Agent.Create<TAGENT>(null, 0, 0);
-        }
-
-        /**
-        destroy the agent created by 'Create'
-
-        @sa Create
-        */
-        static void Destory(Agent pAgent)
-        {
-            //pAgent.UnSubsribeToNetwork();
-
-            //BEHAVIAC_DELETE(pAgent);
-        }
-
-        /**
-        create an instance of 'TAGENT' and bind it to 'agentInstanceName'
-
-        @param agentInstanceName
-        the specified name to bind the created instance.
-        if 'agentInstanceName' is 0, the class name of 'TAGENT' will be used.
-
-        @contextId
-        by default, it is 0
-
-        @sa RegisterName
-        */
-        public static TAGENT CreateInstance<TAGENT>(string agentInstanceName, int contextId, short priority) where TAGENT : Agent, new()
-        {
-            Context c = Context.GetContext(contextId);
-
-            TAGENT pA = null;
-
-            string agentInstanceNameAny = agentInstanceName;
-            if (agentInstanceNameAny.IsNullOrEmpty())
-            {
-                agentInstanceNameAny = typeof(TAGENT).FullName;
-            }
-
-            Debug.Check(Agent.IsNameRegistered(agentInstanceNameAny), "only a registered name can be created by CreateInstance");
-
-            Agent a = c.GetInstance(agentInstanceNameAny);
-            if (a == null)
-            {
-                //TAGENT should be derived from Agent
-                GameObject go = new GameObject();
-                Agent pAgent = go.AddComponent<TAGENT>();
-                Debug.Check(!Object.ReferenceEquals(pAgent, null) && typeof(TAGENT).IsSubclassOf(typeof(Agent)));
-
-                Init_(contextId, pAgent, priority, agentInstanceNameAny);
-                Debug.Check(pAgent is TAGENT);
-
-                c.BindInstance(pAgent, agentInstanceNameAny);
-            }
-            else
-            {
-                Debug.Check(a is TAGENT);
-
-                pA = (TAGENT)a;
-            }
-
-            return pA;
-        }
-
-        public static TAGENT CreateInstance<TAGENT>(string agentInstanceName, int contextId) where TAGENT : Agent, new()
-        {
-            return Agent.CreateInstance<TAGENT>(agentInstanceName, contextId, 0);
-        }
-
-        public static TAGENT CreateInstance<TAGENT>(string agentInstanceName) where TAGENT : Agent, new()
-        {
-            return Agent.CreateInstance<TAGENT>(agentInstanceName, 0, 0);
-        }
-
-        public static TAGENT CreateInstance<TAGENT>() where TAGENT : Agent, new()
-        {
-            return Agent.CreateInstance<TAGENT>(null, 0, 0);
-        }
-
-        public static void DestroyInstance<TAGENT>(string agentInstanceName, int contextId) where TAGENT : Agent, new()
-        {
-            Context c = Context.GetContext(contextId);
-
-            string agentInstanceNameAny = agentInstanceName;
-            if (agentInstanceNameAny.IsNullOrEmpty())
-            {
-                agentInstanceNameAny = typeof(TAGENT).FullName;
-            }
-
-            Agent a = c.GetInstance(agentInstanceNameAny);
-            c.UnbindInstance(agentInstanceNameAny);
-        }
-
-        public static void DestroyInstance<TAGENT>(string agentInstanceName) where TAGENT : Agent, new()
-        {
-            Agent.DestroyInstance<TAGENT>(agentInstanceName, 0);
-        }
-
-
-        public static void DestroyInstance<TAGENT>() where TAGENT : Agent, new()
-        {
-            Agent.DestroyInstance<TAGENT>(null, 0);
-        }
-#endif//BEHAVIAC_UNITY_CREATE
-
-        /**
-        bind 'agentInstanceName' to 'pAgentInstance'. 
+        bind 'agentInstanceName' to 'pAgentInstance'.
         'agentInstanceName' should have been registered to the class of 'pAgentInstance' or its parent class.
 
         if 'agentInstanceName' is not specified, the class type name of 'pAgentInstance' will be used.
-        @sa RegisterName
+        @sa RegisterInstanceName
         */
+
         public static bool BindInstance(Agent pAgentInstance, string agentInstanceName, int contextId)
         {
             Context c = Context.GetContext(contextId);
@@ -780,20 +607,22 @@ namespace behaviac
         /**
         bind 'pAgentInstance' to the class type name of 'pAgentInstance'.
 
-        RegisterName<TAGENT>() should have been called to regiser 'the class type name'.
-        @sa RegisterName
+        RegisterInstanceName<TAGENT>() should have been called to regiser 'the class type name'.
+        @sa RegisterInstanceName
         */
+
         public static bool BindInstance(Agent pAgentInstance)
         {
             return Agent.BindInstance(pAgentInstance, null, 0);
         }
 
         /**
-        unbind 'agentInstanceName' from 'pAgentInstance'. 
+        unbind 'agentInstanceName' from 'pAgentInstance'.
         'agentInstanceName' should have been bound to 'pAgentInstance'.
 
-        @sa RegisterName, BindInstance, CreateInstance
+        @sa RegisterInstanceName, BindInstance, CreateInstance
         */
+
         public static bool UnbindInstance(string agentInstanceName, int contextId)
         {
             Context c = Context.GetContext(contextId);
@@ -827,6 +656,7 @@ namespace behaviac
         public static TAGENT GetInstance<TAGENT>(string agentInstanceName, int contextId) where TAGENT : Agent, new()
         {
             string agentInstanceNameAny = agentInstanceName;
+
             if (string.IsNullOrEmpty(agentInstanceNameAny))
             {
                 agentInstanceNameAny = typeof(TAGENT).FullName;
@@ -849,17 +679,14 @@ namespace behaviac
             return Agent.GetInstance<TAGENT>(null, 0);
         }
 
+#if !BEHAVIAC_RELEASE
         public class CTagObjectDescriptor
         {
-            public CTagObjectDescriptor()
-            {
-            }
-
             public void Load(Agent parent, ISerializableNode node)
             {
-                foreach (CMemberBase m in ms_members)
+                for (int i = 0; i < ms_members.Count; ++i)
                 {
-                    m.Load(parent, node);
+                    ms_members[i].Load(parent, node);
                 }
 
                 if (this.m_parent != null)
@@ -867,6 +694,7 @@ namespace behaviac
                     this.m_parent.Load(parent, node);
                 }
             }
+
             public void Save(Agent parent, ISerializableNode node)
             {
                 if (this.m_parent != null)
@@ -874,9 +702,9 @@ namespace behaviac
                     this.m_parent.Save(parent, node);
                 }
 
-                foreach (CMemberBase m in ms_members)
+                for (int i = 0; i < ms_members.Count; ++i)
                 {
-                    m.Save(parent, node);
+                    ms_members[i].Save(parent, node);
                 }
             }
 
@@ -889,20 +717,44 @@ namespace behaviac
             {
                 if (this.ms_members != null)
                 {
-					//CMemberBase pMember = this.ms_members.Find(delegate (CMemberBase m) {return m.GetName() == memberName;});
-					for (int i = 0; i < this.ms_members.Count; ++i)
-					{
-						CMemberBase pMember = this.ms_members[i];
-						if (pMember.GetName() == memberName)
-						{
-							return pMember;
-						}
-					}
+                    //CMemberBase pMember = this.ms_members.Find(delegate (CMemberBase m) {return m.GetName() == memberName;});
+                    for (int i = 0; i < this.ms_members.Count; ++i)
+                    {
+                        CMemberBase pMember = this.ms_members[i];
+
+                        if (pMember.Name == memberName)
+                        {
+                            return pMember;
+                        }
+                    }
                 }
 
                 if (this.m_parent != null)
                 {
                     return this.m_parent.GetMember(memberName);
+                }
+
+                return null;
+            }
+
+            public CMemberBase GetMember(uint memberId)
+            {
+                if (this.ms_members != null)
+                {
+                    CMemberBase pMember = this.ms_members.Find(delegate(CMemberBase m)
+                    {
+                        return m.GetId().GetId() == memberId;
+                    });
+
+                    if (pMember != null)
+                    {
+                        return pMember;
+                    }
+                }
+
+                if (this.m_parent != null)
+                {
+                    return this.m_parent.GetMember(memberId);
                 }
 
                 return null;
@@ -919,7 +771,10 @@ namespace behaviac
 
         public static CTagObjectDescriptor GetDescriptorByName(string className)
         {
+            className = className.Replace("::", ".");
+            className = className.Replace("+", ".");
             CStringID classNameid = new CStringID(className);
+
             if (Metas.ContainsKey(classNameid))
             {
                 return Metas[classNameid];
@@ -931,18 +786,20 @@ namespace behaviac
             return od;
         }
 
-		private CTagObjectDescriptor m_objectDescriptor = null;
+        private CTagObjectDescriptor m_objectDescriptor = null;
+
         public CTagObjectDescriptor GetDescriptor()
         {
-			if (m_objectDescriptor == null) 
-			{
-				m_objectDescriptor = Agent.GetDescriptorByName (this.GetType ().FullName);
-			}
+            if (m_objectDescriptor == null)
+            {
+                m_objectDescriptor = Agent.GetDescriptorByName(this.GetType().FullName);
+            }
 
-			return m_objectDescriptor;
+            return m_objectDescriptor;
         }
 
         private static Dictionary<CStringID, CTagObjectDescriptor> ms_metas;
+
         public static Dictionary<CStringID, CTagObjectDescriptor> Metas
         {
             get
@@ -951,9 +808,24 @@ namespace behaviac
                 {
                     ms_metas = new Dictionary<CStringID, CTagObjectDescriptor>();
                 }
+
                 return ms_metas;
             }
         }
+
+        //public static Type GetTypeFromName(string typeName)
+        //{
+        //    CStringID typeNameId = new CStringID(typeName);
+
+        //    if (Metas.ContainsKey(typeNameId))
+        //    {
+        //        CTagObjectDescriptor objectDesc = Metas[typeNameId];
+
+        //        return objectDesc.type;
+        //    }
+
+        //    return null;
+        //}
 
         public static bool IsTypeRegisterd(string typeName)
         {
@@ -974,23 +846,16 @@ namespace behaviac
         {
             CTagObjectDescriptor objectDesc = this.GetDescriptor();
 
-			CMemberBase pMember = null;
-			for(int i = 0; i < objectDesc.ms_members.Count; ++i)
-			{
-				pMember = objectDesc.ms_members[i];
-				if (pMember.GetId().GetId() == propertyId)
-				{
-					return pMember;
-				}
-			}
+            CMemberBase pMember = objectDesc.GetMember(propertyId);
 
-            return null;
+            return pMember;
         }
 
-        static int ParsePropertyNames(string fullPropertnName, ref string agentClassName)
+        private static int ParsePropertyNames(string fullPropertnName, ref string agentClassName)
         {
             //test_ns::AgentActionTest::Property1
             int pBeginProperty = fullPropertnName.LastIndexOf(':');
+
             if (pBeginProperty != -1)
             {
                 //skip '::'
@@ -1006,211 +871,412 @@ namespace behaviac
 
             return -1;
         }
+#endif
 
-        public static CMemberBase FindMemberBase(string propertyName)
+        private Dictionary<uint, IInstantiatedVariable> GetCustomizedVariables()
         {
-            string propertyBaseName = null;
-            //test_ns::AgentActionTest::Property1
-            int pos = ParsePropertyNames(propertyName, ref propertyBaseName);
-
-            if (pos != -1)
+            string agentClassName = this.GetClassTypeName();
+            uint agentClassId = Utils.MakeVariableId(agentClassName);
+            AgentMeta meta = AgentMeta.GetMeta(agentClassId);
+            if (meta != null)
             {
-                string classNameTo = propertyName.Substring(0, pos).Replace("::", ".");
+                Dictionary<uint, IInstantiatedVariable> vars = meta.InstantiateCustomizedProperties();
 
-                CStringID agentClassId = new CStringID(classNameTo);
-                CStringID propertyId = new CStringID(propertyBaseName);
-
-                CMemberBase m = FindMemberBase(agentClassId, propertyId);
-                return m;
+                return vars;
             }
 
             return null;
         }
 
-        public static CMethodBase FindMethodBase(string propertyName)
+#if BEHAVIAC_USE_HTN
+        private AgentState m_variables = null;
+        public AgentState Variables
         {
-            int pSep = propertyName.LastIndexOf(':');
-
-            if (pSep != -1)
+            get
             {
-                Debug.Check(propertyName[pSep - 1] == ':');
-                string classNameTo = propertyName.Substring(0, pSep - 1);
+                if (m_variables == null)
+                {
+                    Dictionary<uint, IInstantiatedVariable> vars = this.GetCustomizedVariables();
+                    this.m_variables = new AgentState(vars);
+                }
 
-                CStringID agentClassId = new CStringID(classNameTo);
-                CStringID propertyId = new CStringID(propertyName.Substring(pSep + 1));
+                return m_variables;
+            }
+        }
 
-                CMethodBase m = FindMethodBase(agentClassId, propertyId);
-                return m;
+#else
+        private Variables m_variables = null;
+
+        public Variables Variables
+        {
+            get
+            {
+                if (m_variables == null)
+                {
+                    Dictionary<uint, IInstantiatedVariable> vars = this.GetCustomizedVariables();
+
+                    this.m_variables = new Variables(vars);
+                }
+
+                return m_variables;
+            }
+        }
+
+#endif//
+
+
+#if !BEHAVIAC_RELEASE
+        //for log only, to remember its last value
+        private Dictionary<uint, IValue> _members = new Dictionary<uint,IValue>();
+#endif
+
+        internal IInstantiatedVariable GetInstantiatedVariable(uint varId)
+        {
+            // local var
+            if (this.ExcutingTreeTask != null && this.ExcutingTreeTask.LocalVars.ContainsKey(varId))
+            {
+                return this.ExcutingTreeTask.LocalVars[varId];
+            }
+
+            // customized var
+            IInstantiatedVariable pVar = this.Variables.GetVariable(varId);
+
+            return pVar;
+        }
+
+        private IProperty GetProperty(uint propId)
+        {
+            string className = this.GetClassTypeName();
+            uint classId = Utils.MakeVariableId(className);
+            AgentMeta meta = AgentMeta.GetMeta(classId);
+            if (meta != null)
+            {
+                IProperty prop = meta.GetProperty(propId);
+                if (prop != null)
+                    return prop;
             }
 
             return null;
         }
 
-        public static CMemberBase FindMemberBase(CStringID agentClassId, CStringID propertyId)
+        internal bool GetVarValue<VariableType>(uint varId, out VariableType value)
         {
-            if (Metas.ContainsKey(agentClassId))
+            IInstantiatedVariable v = this.GetInstantiatedVariable(varId);
+
+            if (v != null)
             {
-                CTagObjectDescriptor pObejctDesc = Metas[agentClassId];
-                //CMemberBase pMember = pObejctDesc.ms_members.Find(delegate(CMemberBase m) { return m.GetId() == propertyId; });
-				for (int i = 0; i < pObejctDesc.ms_members.Count; ++i)
-				{
-					CMemberBase pMember = pObejctDesc.ms_members[i];
-					if (pMember.GetId() == propertyId)
-					{
-						return pMember;
-					}
-				}
+                if (typeof(VariableType).IsValueType)
+                {
+                    Debug.Check(v is CVariable<VariableType>);
 
-	            if (pObejctDesc.type.BaseType != null)
-	            {
-	                CStringID agentBaseClassId = new CStringID(pObejctDesc.type.BaseType.FullName);
-
-					CMemberBase pMember = FindMemberBase(agentBaseClassId, propertyId);
-
-					return pMember;
-	            }
+                    CVariable<VariableType> var = (CVariable<VariableType>)v;
+                    if (var != null)
+                    {
+                        value = var.GetValue(this);
+                        return true;
+                    }
+                }
+                else
+                {
+                    value = (VariableType)v.GetValueObject(this);
+                    return true;
+                }
             }
 
-            return null;
+            value = default(VariableType);
+            return false;
         }
 
-        public static CMethodBase FindMethodBase(CStringID agentClassId, CStringID propertyId)
+        private bool GetVarValue<VariableType>(uint varId, int index, out VariableType value)
         {
-            if (Metas.ContainsKey(agentClassId))
+            IInstantiatedVariable v = this.GetInstantiatedVariable(varId);
+
+            if (v != null)
             {
-                //const string& className = it.first;
-
-                CTagObjectDescriptor pObejctDesc = Metas[agentClassId];
-                //CMethodBase pMethod = pObejctDesc.ms_methods.Find(delegate(CMethodBase m) { return m.GetId() == propertyId; });
-				for (int i = 0; i < pObejctDesc.ms_methods.Count; ++i)
-				{
-					CMethodBase pMethod = pObejctDesc.ms_methods[i];
-					if (pMethod.GetId() == propertyId)
-					{
-						return pMethod;
-					}
-				}
-
-				if (pObejctDesc.type != null)
-				{
-		            if (pObejctDesc.type.BaseType != null)
-		            {
-		                CStringID agentBaseClassId = new CStringID(pObejctDesc.type.BaseType.FullName);
-
-						CMethodBase pMethod = FindMethodBase(agentBaseClassId, propertyId);
-						return pMethod;
-		            }
-				}
+                Debug.Check(v is CArrayItemVariable<VariableType>);
+                CArrayItemVariable<VariableType> arrayItemVar = (CArrayItemVariable<VariableType>)v;
+                if (arrayItemVar != null)
+                {
+                    value = arrayItemVar.GetValue(this, index);
+                    return true;
+                }
             }
 
-            return null;
+            value = default(VariableType);
+            return false;
         }
 
-        public static Property CreateProperty(string typeName, string propertyName, string defaultValue)
+        internal bool SetVarValue<VariableType>(uint varId, VariableType value)
         {
-            CMemberBase pMember = Agent.FindMemberBase(propertyName);
-
-            if (pMember != null)
+            IInstantiatedVariable v = this.GetInstantiatedVariable(varId);
+            if (v != null)
             {
-                Property pProperty = pMember.CreateProperty(defaultValue, false);
-
-                return pProperty;
+                Debug.Check(v is CVariable<VariableType>);
+                CVariable<VariableType> var = (CVariable<VariableType>)v;
+                if (var != null)
+                {
+                    var.SetValue(this, value);
+                    return true;
+                }
             }
-            //else
-            //{
-            //    CMethodBase pMethod = null;
-            //    if (!propertyName.IsNullOrEmpty())
-            //    {
-            //        pMethod = Agent.FindMethodBase(propertyName);
-            //    }
 
-            //    if (pMethod != null)
-            //    {
-            //        return pMethod.CreateProperty(defaultValue, true);
-            //    }
-            //}
-
-            return null;
+            return false;
         }
 
-        ///////////////////////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////////////////////
-        public static CMethodBase CreateMethod(CStringID agentClassId, CStringID methodClassId)
+        private bool SetVarValue<VariableType>(uint varId, int index, VariableType value)
         {
-            CMethodBase pM = Agent.FindMethodBase(agentClassId, methodClassId);
-            Debug.Check(pM != null);
+            IInstantiatedVariable v = this.GetInstantiatedVariable(varId);
+            if (v != null)
+            {
+                Debug.Check(v is CArrayItemVariable<VariableType>);
+                CArrayItemVariable<VariableType> arrayItemVar = (CArrayItemVariable<VariableType>)v;
+                if (arrayItemVar != null)
+                {
+                    arrayItemVar.SetValue(this, value, index);
+                    return true;
+                }
+            }
 
-            return pM.clone();
+            return false;
         }
 
-        /**
-        get a variable by its name
-
-        it is invalid to call GetVariable<Type>("par_name") before exec the BT or SetVariableGetVariable<Type>("par_name") 
-        as "par_name" would not had been created then
-        */
-        public object GetVariable(string variableName)
+        public bool IsValidVariable(string variableName)
         {
-			uint varId = Utils.MakeVariableId (variableName);
-			object v = this.Variables.Get(this, varId);
+            uint variableId = Utils.MakeVariableId(variableName);
 
-            return v;
+            IInstantiatedVariable v = this.GetInstantiatedVariable(variableId);
+            if (v != null)
+                return true;
+
+            IProperty prop = this.GetProperty(variableId);
+            return (prop != null);
         }
 
-		public object GetVariable(uint variableId)
-		{
-			object v = this.Variables.Get(this, variableId);
-			
-			return v;
-		}
+        public VariableType GetVariable<VariableType>(string variableName)
+        {
+            uint variableId = Utils.MakeVariableId(variableName);
+
+            return GetVariable<VariableType>(variableId);
+        }
+
+        internal VariableType GetVariable<VariableType>(uint variableId)
+        {
+            VariableType value;
+
+            // var
+            if (this.GetVarValue<VariableType>(variableId, out value))
+            {
+                return value;
+            }
+
+            // property
+            IProperty prop = this.GetProperty(variableId);
+            if (prop != null)
+            {
+                if (typeof(VariableType).IsValueType)
+                {
+                    Debug.Check(prop is CProperty<VariableType>);
+                    CProperty<VariableType> p = (CProperty<VariableType>)prop;
+                    Debug.Check(p != null);
+                    if (p != null)
+                        return p.GetValue(this);
+                }
+                else
+                {
+                    return (VariableType)prop.GetValueObject(this);
+                }
+            }
+
+            Debug.Check(false, string.Format("The variable \"{0}\" with type \"{1}\" can not be found!", variableId, typeof(VariableType).Name));
+            return default(VariableType);
+        }
+
+        internal VariableType GetVariable<VariableType>(uint variableId, int index)
+        {
+            VariableType value;
+
+            // var
+            if (this.GetVarValue<VariableType>(variableId, index, out value))
+            {
+                return value;
+            }
+
+            // property
+            IProperty prop = this.GetProperty(variableId);
+
+            if (prop != null)
+            {
+                if (typeof(VariableType).IsValueType)
+                {
+                    Debug.Check(prop is CProperty<VariableType>);
+                    CProperty<VariableType> p = (CProperty<VariableType>)prop;
+                    if (p != null)
+                        return p.GetValue(this, index);
+                }
+                else
+                {
+                    return (VariableType)prop.GetValueObject(this, index);
+                }
+            }
+
+            Debug.Check(false, string.Format("The variable \"{0}\" with type \"{1}\" can not be found!", variableId, typeof(VariableType).Name));
+            return default(VariableType);
+        }
 
         public void SetVariable<VariableType>(string variableName, VariableType value)
         {
-			uint variableId = Utils.MakeVariableId(variableName);
+            uint variableId = Utils.MakeVariableId(variableName);
 
-			this.SetVariable (variableName, value, variableId);
+            SetVariable<VariableType>(variableName, variableId, value);
         }
 
-		public void SetVariable<VariableType>(string variableName, VariableType value, uint variableId)
-		{
-			if (variableId == 0) 
-			{
-				variableId = Utils.MakeVariableId(variableName);
-			}
-
-			this.Variables.Set(this, null, variableName, value, variableId);
-		}
-
-        public void SetVariableFromString(string variableName, string valueStr)
+        internal void SetVariable<VariableType>(string variableName, uint variableId, VariableType value)
         {
-            this.Variables.SetFromString(this, variableName, valueStr);
+            if (variableId == 0)
+            {
+                variableId = Utils.MakeVariableId(variableName);
+            }
+
+            // var
+            if (this.SetVarValue<VariableType>(variableId, value))
+            {
+                return;
+            }
+
+            // property
+            IProperty prop = this.GetProperty(variableId);
+
+            if (prop != null)
+            {
+                Debug.Check(prop is CProperty<VariableType>);
+                CProperty<VariableType> p = (CProperty<VariableType>)prop;
+                if (p != null)
+                {
+                    p.SetValue(this, value);
+                    return;
+                }
+            }
+
+            Debug.Check(false, string.Format("The variable \"{0}\" with type \"{1}\" can not be found! please check the variable name or be after loading type info(btload)!", variableName, typeof(VariableType).Name));
         }
 
-
-        public void Instantiate<VariableType>(VariableType value, Property property_)
+        internal void SetVariable<VariableType>(string variableName, uint variableId, VariableType value, int index)
         {
-            this.Variables.Instantiate(property_, value);
+            if (variableId == 0)
+            {
+                variableId = Utils.MakeVariableId(variableName);
+            }
+
+            // var
+            if (this.SetVarValue<VariableType>(variableId, index, value))
+            {
+                return;
+            }
+
+            // property
+            IProperty prop = this.GetProperty(variableId);
+
+            if (prop != null)
+            {
+                Debug.Check(prop is CProperty<VariableType>);
+                CProperty<VariableType> p = (CProperty<VariableType>)prop;
+                if (p != null)
+                {
+                    p.SetValue(this, value, index);
+                    return;
+                }
+            }
+
+            Debug.Check(false, string.Format("The variable \"{0}\" with type \"{1}\" can not be found!", variableName, typeof(VariableType).Name));
         }
 
-        public void UnInstantiate(string variableName)
+        internal void SetVariableFromString(string variableName, string valueStr)
         {
-            this.Variables.UnInstantiate(variableName);
+            uint variableId = Utils.MakeVariableId(variableName);
+            IInstanceMember valueMember = AgentMeta.ParseProperty(valueStr);
+
+            IInstantiatedVariable v = this.GetInstantiatedVariable(variableId);
+            if (v != null)
+            {
+                v.SetValue(this, valueMember.GetValueObject(this));
+                return;
+            }
+
+            IProperty prop = this.GetProperty(variableId);
+            prop.SetValue(this, valueMember);
         }
 
-        public void UnLoad(string variableName)
+        public void LogVariables(bool bForce)
         {
-            this.Variables.UnLoad(variableName);
-        }
 #if !BEHAVIAC_RELEASE
-        int m_debug_verify;
-        private const int kAGENT_DEBUG_VERY = 0x01010101;
+            if (Config.IsLoggingOrSocketing)
+            {
+                // property
+                string className = this.GetClassTypeName();
+                uint classId = Utils.MakeVariableId(className);
+                AgentMeta meta = AgentMeta.GetMeta(classId);
+
+                if (meta != null)
+                {
+                    // local var
+                    if (this.ExcutingTreeTask != null)
+                    {
+                        var e = this.ExcutingTreeTask.LocalVars.Keys.GetEnumerator();
+                        while (e.MoveNext())
+                        {
+                            uint id = e.Current;
+                            IInstantiatedVariable pVar = this.ExcutingTreeTask.LocalVars[id];
+
+                            pVar.Log(this);
+                        }
+                    }//
+
+                    //customized property
+                    this.Variables.Log(this);
+
+                    //member property
+                    {
+                        Dictionary<uint, IProperty> memberProperties = meta.GetMemberProperties();
+
+                        var e = memberProperties.Keys.GetEnumerator();
+                        while (e.MoveNext())
+                        {
+                            uint id = e.Current;
+                            IProperty pProperty = memberProperties[id];
+
+                            if (!pProperty.IsArrayItem)
+                            {
+                                bool bNew = false;
+                                IValue pVar = null;
+                                if (this._members.ContainsKey(id))
+                                {
+                                    pVar = this._members[id];
+                                }
+                                else
+                                {
+                                    bNew = true;
+                                    pVar = pProperty.CreateIValue();
+                                    this._members[id] = pVar;
+                                }
+
+                                pVar.Log(this, pProperty.Name, bNew);
+                            }
+                        }
+                    }
+                }
+            }
+#endif
+        }
+
+#if !BEHAVIAC_RELEASE
+        public int m_debug_in_exec;
+        public int m_debug_count;
+        //private const int kAGENT_DEBUG_VERY = 0x01010101;
 #endif//#if !BEHAVIAC_RELEASE
 
-        protected static void Init_(int contextId, Agent pAgent, int priority, string agentInstanceName)
+        protected static void Init_(int contextId, Agent pAgent, int priority)
         {
-#if !BEHAVIAC_RELEASE
-            pAgent.m_debug_verify = kAGENT_DEBUG_VERY;
-#endif//#if !BEHAVIAC_RELEASE
+            Workspace.Instance.RegisterStuff();
 
             Debug.Check(contextId >= 0, "invalid context id");
 
@@ -1218,34 +1284,19 @@ namespace behaviac
             pAgent.m_id = ms_agent_index++;
             pAgent.m_priority = priority;
 
-            pAgent.SetName(agentInstanceName);
-            pAgent.InitVariableRegistry();
-
-            {
-                //World pWorld = World::GetInstance(contextId);
-                Context c = Context.GetContext(contextId);
-                World pWorldPtr = c.GetWorld(true);
-
-                if (!System.Object.ReferenceEquals(pWorldPtr, null) && !System.Object.ReferenceEquals(pWorldPtr, pAgent))
-                {
-                    //string msg = string.Format("AddAgent {0} {1}", pAgent.GetName(), pWorldPtr.GetName());
-                    //behaviac.Debug.Log(msg);
-                    pWorldPtr.AddAgent(pAgent);
-                }
-            }
+            Context.AddAgent(pAgent);
 
 #if !BEHAVIAC_RELEASE
-			string agentClassName = pAgent.GetClassTypeName();
-			string instanceName = pAgent.GetName();
-			
-			string aName = string.Format("{0}#{1}", agentClassName, instanceName);
-			
-			ms_agents[aName] = pAgent;
+            pAgent.m_debug_in_exec = 0;
+
+            string agentClassName = pAgent.GetClassTypeName();
+            string instanceName = pAgent.GetName();
+
+            string aName = string.Format("{0}#{1}", agentClassName, instanceName);
+
+            ms_agents[aName] = pAgent;
 #endif
-
-            pAgent.SubsribeToNetwork();
         }
-
 
         public void btresetcurrrent()
         {
@@ -1255,44 +1306,38 @@ namespace behaviac
             }
         }
 
-
         /**
-        before set the found one as the current bt, 
-        it aborts the current one and pushes it on the stack so that it will be continued later when the 
-        new one is finished.
+        before set the specified one as the current bt, it aborts the current one
         */
-		public void btsetcurrent(string relativePath)
-		{
-			_btsetcurrent (relativePath, TriggerMode.TM_Transfer, false);
-		}
 
-		public void btreferencetree(string relativePath)
-		{
-			this._btsetcurrent(relativePath, TriggerMode.TM_Return, false);
-			this.m_referencetree = true;
-		}
-		
-		public void bteventtree(string relativePath, TriggerMode triggerMode)
-		{
-			this._btsetcurrent(relativePath, triggerMode, true);
-		}
+        public void btsetcurrent(string relativePath)
+        {
+            _btsetcurrent(relativePath, TriggerMode.TM_Transfer, false);
+        }
 
+        public void btreferencetree(string relativePath)
+        {
+            this._btsetcurrent(relativePath, TriggerMode.TM_Return, false);
+            this.m_referencetree = true;
+        }
+
+        public void bteventtree(Agent pAgent, string relativePath, TriggerMode triggerMode)
+        {
+            this._btsetcurrent(relativePath, triggerMode, true);
+        }
 
         private void _btsetcurrent(string relativePath, TriggerMode triggerMode, bool bByEvent)
         {
             bool bEmptyPath = string.IsNullOrEmpty(relativePath);
             Debug.Check(!bEmptyPath && string.IsNullOrEmpty(Path.GetExtension(relativePath)));
-            Debug.Check(Workspace.IsValidPath(relativePath));
+            Debug.Check(Workspace.Instance.IsValidPath(relativePath));
 
             if (!bEmptyPath)
             {
-//				if (this.m_currentBT != null && this.m_currentBT.GetName() == relativePath)
-//				{
-//					//the same bt is set again
-//					return;
-//				}
+                // if (this.m_currentBT != null && this.m_currentBT.GetName() == relativePath) {
+                // //the same bt is set again return; }
 
-                bool bLoaded = Workspace.Load(relativePath);
+                bool bLoaded = Workspace.Instance.Load(relativePath);
 
                 if (!bLoaded)
                 {
@@ -1305,121 +1350,144 @@ namespace behaviac
                 }
                 else
                 {
-                    Workspace.RecordBTAgentMapping(relativePath, this);
+                    Workspace.Instance.RecordBTAgentMapping(relativePath, this);
 
-					if (this.m_currentBT != null)
+                    if (this.m_currentBT != null)
                     {
-						//if trigger mode is 'return', just push the current bt 'oldBt' on the stack and do nothing more
-						//'oldBt' will be restored when the new triggered one ends
-						if (triggerMode == TriggerMode.TM_Return)
-						{
-							BehaviorTreeStackItem_t item = new BehaviorTreeStackItem_t(this.m_currentBT, triggerMode, bByEvent);
-	                        Debug.Check(this.BTStack.Count < 200, "recursive?");
+                        //if trigger mode is 'return', just push the current bt 'oldBt' on the stack and do nothing more
+                        //'oldBt' will be restored when the new triggered one ends
+                        if (triggerMode == TriggerMode.TM_Return)
+                        {
+                            BehaviorTreeStackItem_t item = new BehaviorTreeStackItem_t(this.m_currentBT, triggerMode, bByEvent);
+                            Debug.Check(this.BTStack.Count < 200, "recursive?");
 
-	                        this.BTStack.Add(item);
-						}
+                            this.BTStack.Add(item);
+                        }
                         else if (triggerMode == TriggerMode.TM_Transfer)
                         {
                             //don't use the bt stack to restore, we just abort the current one.
                             //as the bt node has onenter/onexit, the abort can make them paired
-							//Debug.Check (this.m_currentBT.GetName() != relativePath);
-	                        
-							this.m_currentBT.abort(this);
-	                        this.m_currentBT.reset(this);
+                            //Debug.Check (this.m_currentBT.GetName() != relativePath);
+
+                            if (this.m_currentBT.GetName() != relativePath)
+                            {
+                                this.m_currentBT.abort(this);
+                            }
+                            else
+                            {
+                                Debug.Check(true);
+                            }
                         }
                     }
 
-					//BehaviorTreeTask pTask = this.BehaviorTreeTasks.Find(delegate (BehaviorTreeTask task) {return task.GetName() == relativePath;});
-					BehaviorTreeTask pTask = null;
-					for (int i = 0; i < this.BehaviorTreeTasks.Count; ++i)
-					{
-						BehaviorTreeTask t = this.BehaviorTreeTasks[i];
-						if (t.GetName() == relativePath)
-						{
-							pTask = t;
-							break;
-						}
-					}
+                    //BehaviorTreeTask pTask = this.BehaviorTreeTasks.Find(delegate (BehaviorTreeTask task) {return task.GetName() == relativePath;});
+                    BehaviorTreeTask pTask = null;
+
+                    for (int i = 0; i < this.BehaviorTreeTasks.Count; ++i)
+                    {
+                        BehaviorTreeTask t = this.BehaviorTreeTasks[i];
+
+                        if (t.GetName() == relativePath)
+                        {
+                            pTask = t;
+                            break;
+                        }
+                    }
 
                     bool bRecursive = false;
-					if (pTask != null && this.BTStack.Count > 0)
+
+                    if (pTask != null && this.BTStack.Count > 0)
                     {
-						//bRecursive = this.BTStack.FindIndex(delegate (BehaviorTreeStackItem_t item){return item.bt.GetName() == relativePath;}) > -1;
-						for (int i = 0; i < this.BTStack.Count; ++i)
-						{
-							BehaviorTreeStackItem_t item = this.BTStack[i];
-							if (item.bt.GetName() == relativePath)
-							{
-								bRecursive = true;
-								break;
-							}
-						}
+                        //bRecursive = this.BTStack.FindIndex(delegate (BehaviorTreeStackItem_t item){return item.bt.GetName() == relativePath;}) > -1;
+                        for (int i = 0; i < this.BTStack.Count; ++i)
+                        {
+                            BehaviorTreeStackItem_t item = this.BTStack[i];
+
+                            if (item.bt.GetName() == relativePath)
+                            {
+                                bRecursive = true;
+                                break;
+                            }
+                        }
+
+                        if (pTask.GetStatus() != EBTStatus.BT_INVALID)
+                        {
+                            pTask.reset(this);
+                        }
                     }
 
                     if (pTask == null || bRecursive)
                     {
-                        pTask = Workspace.CreateBehaviorTreeTask(relativePath);
+                        pTask = Workspace.Instance.CreateBehaviorTreeTask(relativePath);
                         Debug.Check(pTask != null);
                         this.BehaviorTreeTasks.Add(pTask);
                     }
 
-                    this.m_currentBT = pTask;
+                    this.CurrentBT = pTask;
+
+                    //string pThisTree = this.m_currentBT.GetName();
+                    //this.LogJumpTree(pThisTree);
                 }
             }
         }
-
-		public List<BehaviorNode> GetRunningNodes()
-		{
-			List<BehaviorNode> nodes = new List<BehaviorNode>();
-			
-			if (this.m_currentBT != null)
-			{
-				nodes = this.m_currentBT.GetRunningNodes();
-			}
-
-			return nodes;
-		}
 
         private EBTStatus btexec_()
         {
             if (this.m_currentBT != null)
             {
                 //the following might modify this.m_currentBT if the invoked function called btsetcurrent/FireEvent
-                BehaviorTreeTask currentBT = this.m_currentBT;
+                BehaviorTreeTask pCurrentBT = this.m_currentBT;
                 EBTStatus s = this.m_currentBT.exec(this);
-                Debug.Check(s == EBTStatus.BT_RUNNING || currentBT == this.m_currentBT, "btsetcurrent/FireEvent is not allowed in the invoked function.");
+                //Debug.Check(s == EBTStatus.BT_RUNNING || pCurrentBT == this.m_currentBT,
+                //    "btsetcurrent/FireEvent is not allowed in the invoked function.");
 
                 while (s != EBTStatus.BT_RUNNING)
                 {
-                    this.m_currentBT.reset(this);
                     if (this.BTStack.Count > 0)
                     {
                         //get the last one
                         BehaviorTreeStackItem_t lastOne = this.BTStack[this.BTStack.Count - 1];
-                        this.m_currentBT = lastOne.bt;
+
+                        this.CurrentBT = lastOne.bt;
                         this.BTStack.RemoveAt(this.BTStack.Count - 1);
+
+                        bool bExecCurrent = false;
 
                         if (lastOne.triggerMode == TriggerMode.TM_Return)
                         {
-                            string newBT = this.m_currentBT.GetName();
-                            LogManager.Log(this, newBT, EActionResult.EAR_none, LogMode.ELM_return);
-
-							if (!lastOne.triggerByEvent)
-							{
-	                            /*EBTStatus s0 = */this.m_currentBT.resume(this, s);
-	                            s = this.m_currentBT.exec(this);
-							}
+                            if (!lastOne.triggerByEvent)
+                            {
+                                if (this.m_currentBT != pCurrentBT)
+                                {
+                                    s = this.m_currentBT.resume(this, s);
+                                }
+                                else
+                                {
+                                    //pCurrentBT ends and while pCurrentBT is exec, it internally calls 'btsetcurrent'
+                                    //to modify m_currentBT as the new one, and after pop from the stack, m_currentBT would be pCurrentBT
+                                    Debug.Check(true);
+                                }
+                            }
+                            else
+                            {
+                                bExecCurrent = true;
+                            }
                         }
                         else
                         {
+                            bExecCurrent = true;
+                        }
+
+                        if (bExecCurrent)
+                        {
+                            pCurrentBT = this.m_currentBT;
                             s = this.m_currentBT.exec(this);
                             break;
                         }
-
                     }
                     else
                     {
-                        //this.m_currentBT = null;
+                        //this.CurrentBT = null;
                         break;
                     }
                 }
@@ -1434,58 +1502,65 @@ namespace behaviac
             return EBTStatus.BT_INVALID;
         }
 
+        public void LogJumpTree(string newTree)
+        {
+#if !BEHAVIAC_RELEASE
+            string msg = string.Format("{0}.xml", newTree);
+            LogManager.Instance.Log(this, msg, EActionResult.EAR_none, LogMode.ELM_jump);
+#endif
+        }
+
+        public void LogReturnTree(string returnFromTree)
+        {
+#if !BEHAVIAC_RELEASE
+            string msg = string.Format("{0}.xml", returnFromTree);
+            LogManager.Instance.Log(this, msg, EActionResult.EAR_none, LogMode.ELM_return);
+#endif
+        }
+
         public virtual EBTStatus btexec()
         {
             if (this.m_bActive)
             {
+                Profiler.BeginSample("btexec");
+
 #if !BEHAVIAC_RELEASE
-                Debug.Check(this.m_debug_verify == kAGENT_DEBUG_VERY, "You did not call Agent.Init!");
-#endif//#if !BEHAVIAC_RELEASE
-
-                this.UpdateVariableRegistry();
-
+                this.m_debug_in_exec = 1;
+                this.m_debug_count = 0;
+#endif
 
                 EBTStatus s = this.btexec_();
 
-				while (this.m_referencetree && s == EBTStatus.BT_RUNNING)
-				{
-					this.m_referencetree = false;
-					s = this.btexec_();
-				}
+                while (this.m_referencetree && s == EBTStatus.BT_RUNNING)
+                {
+                    this.m_referencetree = false;
+                    s = this.btexec_();
+                }
 
                 if (this.IsMasked())
                 {
                     this.LogVariables(false);
                 }
 
+                Profiler.EndSample();
+
+#if !BEHAVIAC_RELEASE
+                this.m_debug_in_exec = 0;
+#endif
+
                 return s;
             }
-
-			Profiler.EndSample();
 
             return EBTStatus.BT_INVALID;
         }
 
-        public void btonevent(string btEvent)
-        {
-            if (this.m_currentBT != null)
-            {
-                this.m_currentBT.onevent(this, btEvent);
-            }
-        }
-
-        public BehaviorTreeTask btgetcurrent()
-        {
-            return m_currentBT;
-        }
-
         public bool btload(string relativePath, bool bForce /*= false*/)
         {
-            bool bOk = Workspace.Load(relativePath, bForce);
+            bool bOk = Workspace.Instance.Load(relativePath, bForce);
 
             if (bOk)
             {
-                Workspace.RecordBTAgentMapping(relativePath, this);
+                Workspace.Instance.RecordBTAgentMapping(relativePath, this);
             }
 
             return bOk;
@@ -1501,23 +1576,24 @@ namespace behaviac
         public void btunload(string relativePath)
         {
             Debug.Check(string.IsNullOrEmpty(Path.GetExtension(relativePath)), "no extention to specify");
-            Debug.Check(Workspace.IsValidPath(relativePath));
+            Debug.Check(Workspace.Instance.IsValidPath(relativePath));
 
             //clear the current bt if it is the current bt
             if (this.m_currentBT != null && this.m_currentBT.GetName() == relativePath)
             {
-			    BehaviorNode btNode = this.m_currentBT.GetNode();
-			    Debug.Check(btNode is BehaviorTree);
+                BehaviorNode btNode = this.m_currentBT.GetNode();
+                Debug.Check(btNode is BehaviorTree);
                 BehaviorTree bt = btNode as BehaviorTree;
-			    this.btunload_pars(bt);
+                this.btunload_pars(bt);
 
-                this.m_currentBT = null;
+                this.CurrentBT = null;
             }
 
             //remove it from stack
-			for (int i = 0; i < this.BTStack.Count; ++i)
+            for (int i = 0; i < this.BTStack.Count; ++i)
             {
-				BehaviorTreeStackItem_t item = this.BTStack[i];
+                BehaviorTreeStackItem_t item = this.BTStack[i];
+
                 if (item.bt.GetName() == relativePath)
                 {
                     this.BTStack.Remove(item);
@@ -1525,28 +1601,30 @@ namespace behaviac
                 }
             }
 
-			for (int i = 0; i < this.BehaviorTreeTasks.Count; ++i)
+            for (int i = 0; i < this.BehaviorTreeTasks.Count; ++i)
             {
-				BehaviorTreeTask task = this.BehaviorTreeTasks[i];
+                BehaviorTreeTask task = this.BehaviorTreeTasks[i];
+
                 if (task.GetName() == relativePath)
                 {
-                    Workspace.DestroyBehaviorTreeTask(task, this);
+                    Workspace.Instance.DestroyBehaviorTreeTask(task, this);
 
                     this.BehaviorTreeTasks.Remove(task);
                     break;
                 }
             }
 
-            Workspace.UnLoad(relativePath);
+            Workspace.Instance.UnLoad(relativePath);
         }
 
         /**
         called when hotreloaded
 
-        the default implementation is unloading all pars. 
+        the default implementation is unloading all pars.
 
         it can be overridden to do some clean up, like to reset some internal states, etc.
         */
+
         public virtual void bthotreloaded(BehaviorTree bt)
         {
             this.btunload_pars(bt);
@@ -1554,41 +1632,45 @@ namespace behaviac
 
         public void btunloadall()
         {
-			List<BehaviorTree> bts = new List<BehaviorTree>();
-			foreach (BehaviorTreeTask btTask in this.BehaviorTreeTasks)
+            List<BehaviorTree> bts = new List<BehaviorTree>();
+            for (int i = 0; i < this.BehaviorTreeTasks.Count; ++i)
             {
-				BehaviorNode btNode = btTask.GetNode();
-				Debug.Check(btNode is BehaviorTree);
-				BehaviorTree bt = (BehaviorTree)btNode;
+                BehaviorTreeTask btTask = this.BehaviorTreeTasks[i];
+                BehaviorNode btNode = btTask.GetNode();
+                Debug.Check(btNode is BehaviorTree);
+                BehaviorTree bt = (BehaviorTree)btNode;
 
-				bool bFound = false;
-				foreach (BehaviorTree it in bts)
-				{
-					if (it == bt)
-					{
-						bFound = true;
-						break;
-					}
-				}
-				if (!bFound)
-				{
-					bts.Add(bt);
-				}
+                bool bFound = false;
+                for (int t = 0; t < bts.Count; ++t)
+                {
+                    BehaviorTree it = bts[t];
+                    if (it == bt)
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
 
-				Workspace.DestroyBehaviorTreeTask(btTask, this);
+                if (!bFound)
+                {
+                    bts.Add(bt);
+                }
+
+                Workspace.Instance.DestroyBehaviorTreeTask(btTask, this);
             }
 
-			foreach (BehaviorTree it in bts) 
-			{
-				this.btunload_pars (it);
+            for (int t = 0; t < bts.Count; ++t)
+            {
+                BehaviorTree it = bts[t];
+                this.btunload_pars(it);
 
-				Workspace.UnLoad(it.GetName());
-			}
+                Workspace.Instance.UnLoad(it.GetName());
+            }
 
             this.BehaviorTreeTasks.Clear();
 
             //just clear the name vector, don't unload it from cache
-            this.m_currentBT = null;
+            this.CurrentBT = null;
             this.BTStack.Clear();
 
             this.Variables.Unload();
@@ -1596,7 +1678,7 @@ namespace behaviac
 
         public void btreloadall()
         {
-            this.m_currentBT = null;
+            this.CurrentBT = null;
             this.BTStack.Clear();
 
             if (this.m_behaviorTreeTasks != null)
@@ -1604,19 +1686,21 @@ namespace behaviac
                 List<string> bts = new List<string>();
 
                 //collect the bts
-                foreach (BehaviorTreeTask bt in this.m_behaviorTreeTasks)
+                for (int i = 0; i < this.m_behaviorTreeTasks.Count; ++i)
                 {
+                    BehaviorTreeTask bt = this.m_behaviorTreeTasks[i];
                     string btName = bt.GetName();
+
                     if (bts.IndexOf(btName) == -1)
                     {
                         bts.Add(btName);
                     }
                 }
 
-				for (int i = 0; i < bts.Count; ++i)
+                for (int i = 0; i < bts.Count; ++i)
                 {
-					string btName = bts[i];
-                    Workspace.Load(btName, true);
+                    string btName = bts[i];
+                    Workspace.Instance.Load(btName, true);
                 }
 
                 this.BehaviorTreeTasks.Clear();
@@ -1627,11 +1711,11 @@ namespace behaviac
 
         public bool btsave(State_t state)
         {
-            this.m_variables.CopyTo(null, state.Vars);
+            this.Variables.CopyTo(null, state.Vars);
 
             if (this.m_currentBT != null)
             {
-                Workspace.DestroyBehaviorTreeTask(state.BT, this);
+                Workspace.Instance.DestroyBehaviorTreeTask(state.BT, this);
 
                 BehaviorNode pNode = this.m_currentBT.GetNode();
                 state.BT = (BehaviorTreeTask)pNode.CreateAndInitTask();
@@ -1651,12 +1735,13 @@ namespace behaviac
             {
                 if (this.m_currentBT != null)
                 {
-					for (int i = 0; i < this.m_behaviorTreeTasks.Count; ++i)
+                    for (int i = 0; i < this.m_behaviorTreeTasks.Count; ++i)
                     {
-						BehaviorTreeTask task = this.m_behaviorTreeTasks[i];
+                        BehaviorTreeTask task = this.m_behaviorTreeTasks[i];
+
                         if (task == this.m_currentBT)
                         {
-                            Workspace.DestroyBehaviorTreeTask(task, this);
+                            Workspace.Instance.DestroyBehaviorTreeTask(task, this);
 
                             this.m_behaviorTreeTasks.Remove(task);
                             break;
@@ -1676,341 +1761,186 @@ namespace behaviac
 
         private void btunload_pars(BehaviorTree bt)
         {
-			if(bt.m_pars != null)
-			{
-				for (int i = 0; i < bt.m_pars.Count; ++i)
-	            {
-					Property property = bt.m_pars[i];
-	                property.UnLoad(this);
-	            }
-			}
-        }
-
-        CNamedEvent findEventStatic(string eventName, string className, int context_id)
-        {
-            Context c = Context.GetContext(context_id);
-
-            return c.FindEventStatic(eventName, className);
-        }
-
-        void insertEventGlobal(string className, CNamedEvent pEvent, int context_id)
-        {
-            Context c = Context.GetContext(context_id);
-
-            c.InsertEventGlobal(className, pEvent);
-        }
-
-        static CNamedEvent findNamedEventTemplate(List<CMethodBase> methods, string eventName, int context_id)
-        {
-            Context c = Context.GetContext(context_id);
-
-            return c.FindNamedEventTemplate(methods, eventName);
-        }
-
-        Dictionary<CStringID, CNamedEvent> m_eventInfos;
-        Dictionary<CStringID, CNamedEvent> EventInfos
-        {
-            get
+            if (bt.LocalProps != null)
             {
-                if (m_eventInfos == null)
+                bt.LocalProps.Clear();
+            }
+        }
+
+        public void btonevent(string btEvent, Dictionary<uint, IInstantiatedVariable> eventParams)
+        {
+            if (this.m_currentBT != null)
+            {
+                string agentClassName = this.GetClassTypeName();
+                uint agentClassId = Utils.MakeVariableId(agentClassName);
+                AgentMeta meta = AgentMeta.GetMeta(agentClassId);
+                if (meta != null)
                 {
-                    m_eventInfos = new Dictionary<CStringID, CNamedEvent>();
+                    uint eventId = Utils.MakeVariableId(btEvent);
+                    IMethod e = meta.GetMethod(eventId);
+                    if (e != null)
+                    {
+#if !BEHAVIAC_RELEASE
+                        Debug.Check(this.m_debug_in_exec == 0, "FireEvent should not be called during the Agent is in btexec");
+#endif
+                        this.m_currentBT.onevent(this, btEvent, eventParams);
+                    }
+                    else
+                    {
+                        Debug.Check(false, string.Format("unregistered event {0}", btEvent));
+                    }
                 }
-
-                return m_eventInfos;
             }
-        }
-
-        CNamedEvent findEvent(string eventName)
-        {
-            CTagObjectDescriptor meta = this.GetDescriptor();
-
-            int contextId = this.GetContextId();
-            CNamedEvent pNamedMethod = findNamedEventTemplate(meta.ms_methods, eventName, contextId);
-
-            if (pNamedMethod != null)
-            {
-                CNamedEvent pEvent = (CNamedEvent)pNamedMethod.clone();
-
-                CStringID eventID = new CStringID(eventName);
-
-                this.EventInfos[eventID] = pEvent;
-
-                return pEvent;
-            }
-
-
-            return null;
         }
 
         public void FireEvent(string eventName)
         {
-            CNamedEvent pEvent = this.findEvent(eventName);
-            if (pEvent == null)
-            {
-                int contextId = this.GetContextId();
-                CTagObjectDescriptor meta = this.GetDescriptor();
-                pEvent = Agent.findNamedEventTemplate(meta.ms_methods, eventName, contextId);
-            }
-
-            if (pEvent != null)
-            {
-                pEvent.SetFired(this, true);
-            }
-            else
-            {
-                Debug.Check(false, string.Format("unregistered event {0}", eventName));
-            }
+            this.btonevent(eventName, null);
         }
 
         public void FireEvent<ParamType>(string eventName, ParamType param)
         {
-            CNamedEvent pEvent = this.findEvent(eventName);
-            if (pEvent == null)
-            {
-                int contextId = this.GetContextId();
-                CTagObjectDescriptor meta = this.GetDescriptor();
-                pEvent = Agent.findNamedEventTemplate(meta.ms_methods, eventName, contextId);
-            }
+            Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
-            if (pEvent != null)
-            {
-                pEvent.SetParam(this, param);
-                pEvent.SetFired(this, true);
-            }
-            else
-            {
-                Debug.Check(false, string.Format("unregistered event {0}", eventName));
-            }
+            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            uint paramId = Utils.MakeVariableId(paramName);
+            eventParams[paramId] = new CVariable<ParamType>(paramName, param);
+
+            this.btonevent(eventName, eventParams);
         }
 
         public void FireEvent<ParamType1, ParamType2>(string eventName, ParamType1 param1, ParamType2 param2)
         {
-            CNamedEvent pEvent = this.findEvent(eventName);
-            if (pEvent == null)
-            {
-                int contextId = this.GetContextId();
-                CTagObjectDescriptor meta = this.GetDescriptor();
-                pEvent = Agent.findNamedEventTemplate(meta.ms_methods, eventName, contextId);
-            }
+            Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
 
-            if (pEvent != null)
-            {
-                pEvent.SetParam(this, param1, param2);
-                pEvent.SetFired(this, true);
-            }
-            else
-            {
-                Debug.Check(false, string.Format("unregistered event {0}", eventName));
-            }
+            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            uint paramId = Utils.MakeVariableId(paramName);
+            eventParams[paramId] = new CVariable<ParamType1>(paramName, param1);
+
+            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramId = Utils.MakeVariableId(paramName);
+            eventParams[paramId] = new CVariable<ParamType2>(paramName, param2);
+
+            this.btonevent(eventName, eventParams);
         }
 
         public void FireEvent<ParamType1, ParamType2, ParamType3>(string eventName, ParamType1 param1, ParamType2 param2, ParamType3 param3)
         {
-            CNamedEvent pEvent = this.findEvent(eventName);
-            if (pEvent == null)
+            Dictionary<uint, IInstantiatedVariable> eventParams = new Dictionary<uint, IInstantiatedVariable>();
+
+            string paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 0);
+            uint paramId = Utils.MakeVariableId(paramName);
+            eventParams[paramId] = new CVariable<ParamType1>(paramName, param1);
+
+            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 1);
+            paramId = Utils.MakeVariableId(paramName);
+            eventParams[paramId] = new CVariable<ParamType2>(paramName, param2);
+
+            paramName = string.Format("{0}{1}", Task.LOCAL_TASK_PARAM_PRE, 2);
+            paramId = Utils.MakeVariableId(paramName);
+            eventParams[paramId] = new CVariable<ParamType3>(paramName, param3);
+
+            this.btonevent(eventName, eventParams);
+        }
+
+        [behaviac.MethodMetaInfo()]
+        public static void LogMessage(string message)
+        {
+            int frames = behaviac.Workspace.Instance.FrameSinceStartup;
+
+            behaviac.Debug.Log(string.Format("[{0}]{1}\n", frames, message));
+        }
+
+        [behaviac.MethodMetaInfo()]
+        public static int VectorLength(IList vector)
+        {
+            if (vector != null)
             {
-                int contextId = this.GetContextId();
-                CTagObjectDescriptor meta = this.GetDescriptor();
-                pEvent = Agent.findNamedEventTemplate(meta.ms_methods, eventName, contextId);
+                return vector.Count;
             }
 
-            if (pEvent != null)
+            return 0;
+        }
+
+        [behaviac.MethodMetaInfo()]
+        public static void VectorAdd(IList vector, object element)
+        {
+            if (vector != null)
             {
-                pEvent.SetParam(this, param1, param2, param3);
-                pEvent.SetFired(this, true);
-            }
-            else
-            {
-                Debug.Check(false, string.Format("unregistered event {0}", eventName));
+                vector.Add(element);
             }
         }
 
-        public bool IsFired(string eventName)
+        [behaviac.MethodMetaInfo()]
+        public static void VectorRemove(IList vector, object element)
         {
+            if (vector != null)
+            {
+                vector.Remove(element);
+            }
+        }
+
+        [behaviac.MethodMetaInfo()]
+        public static bool VectorContains(IList vector, object element)
+        {
+            if (vector != null)
+            {
+                bool bOk = vector.IndexOf(element) > -1;
+
+                return bOk;
+            }
+
             return false;
         }
 
-        public void ResetEvent(string eventName)
+        [behaviac.MethodMetaInfo()]
+        public static void VectorClear(IList vector)
         {
-            CStringID eventID = new CStringID(eventName);
-
-            if (this.EventInfos.ContainsKey(eventID))
+            if (vector != null)
             {
-                CNamedEvent pEvent = this.EventInfos[eventID];
-
-                pEvent.SetFired(this, false);
-
-                return;
-            }
-
-            {
-                int contextId = this.GetContextId();
-                CTagObjectDescriptor meta = this.GetDescriptor();
-                CNamedEvent pEvent = findNamedEventTemplate(meta.ms_methods, eventName, contextId);
-                if (pEvent != null)
-                {
-                    pEvent.SetFired(this, false);
-                }
+                vector.Clear();
             }
         }
 
-        public void LogVariables(bool bForce)
-        {
-#if !BEHAVIAC_RELEASE
-            if (Config.IsLoggingOrSocketing)
-            {
-                this.Variables.Log(this, bForce);
-            }
-#endif
-        }
-
-        void ResetChangedVariables()
-        {
-            this.Variables.Reset();
-        }
-
-
-        void InitVariableRegistry()
-        {
-            this.ResetChangedVariables();
-#if !BEHAVIAC_RELEASE
-			if (Config.IsLoggingOrSocketing) 
-			{
-				string className = this.GetType ().FullName;
-
-				CPropertyNode properyNode = new CPropertyNode (this, className);
-
-				this.Save (properyNode);
-			}
-#endif
-        }
-
-        void UpdateVariableRegistry()
-        {
-//#if !BEHAVIAC_RELEASE
-//			if (Config.IsLoggingOrSocketing) 
-//			{
-//				CPropertyNode properyNode = new CPropertyNode (this, this.GetType ().FullName);
-//
-//				this.Save (properyNode);
-//			}
-//#endif
-			this.ReplicateProperties ();
-        }
-
-        void Save(CPropertyNode node)
-        {
-            //Debug.Check(false);
-        }
-
-        void SubsribeToNetwork()
-        {
-            //behaviac.Network* pNw = behaviac.Network::GetInstance();
-            //if (pNw && !pNw.IsSinglePlayer())
-            //{
-            //    const CTagObjectDescriptor& od = this.GetDescriptor();
-
-            //    MethodsContainer::const_iterator it = od.ms_methods.begin();
-            //    MethodsContainer::const_iterator itEnd = od.ms_methods.end();
-
-            //    for (; it != itEnd; ++it)
-            //    {
-            //        CMethodBase* m = *it;
-            //        //m.GetUiInfo(parent, xmlNode);
-            //        m.SubsribeToNetwork(this);
-            //    }
-            //}
-        }
-
-        void UnSubsribeToNetwork()
-        {
-            //behaviac.Network* pNw = behaviac.Network::GetInstance();
-            //if (pNw && !pNw.IsSinglePlayer())
-            //{
-            //    const CTagObjectDescriptor& od = this.GetDescriptor();
-
-            //    MethodsContainer::const_iterator it = od.ms_methods.begin();
-            //    MethodsContainer::const_iterator itEnd = od.ms_methods.end();
-
-            //    for (; it != itEnd; ++it)
-            //    {
-            //        CMethodBase* m = *it;
-            //        //m.GetUiInfo(parent, xmlNode);
-            //        m.UnSubsribeToNetwork(this);
-            //    }
-            //}
-        }
-
-        void ReplicateProperties()
-        {
-            //behaviac.Network* pNw = behaviac.Network::GetInstance();
-            //if (pNw && !pNw.IsSinglePlayer())
-            //{
-            //    const CTagObjectDescriptor& od = this.GetDescriptor();
-
-            //    CTagObjectDescriptor::MembersVector_t::const_iterator it = od.ms_members.membersVector.begin();
-            //    CTagObjectDescriptor::MembersVector_t::const_iterator itEnd = od.ms_members.membersVector.end();
-
-            //    for (; it != itEnd; ++it)
-            //    {
-            //        CMemberBase* m = *it;
-
-            //        m.ReplicateProperty(this);
-            //    }
-            //}
-        }
-
-        public static Type GetTypeFromName(string typeName)
-        {
-            CStringID typeNameId = new CStringID(typeName);
-
-            if (Metas.ContainsKey(typeNameId))
-            {
-                CTagObjectDescriptor objectDesc = Metas[typeNameId];
-
-                return objectDesc.type;
-            }
-
-            return null;
-        }
 
         [TypeConverter()]
         public class StructConverter : TypeConverter
         {
-            // Overrides the CanConvertFrom method of TypeConverter.
-            // The ITypeDescriptorContext interface provides the context for the
-            // conversion. Typically, this interface is used at design time to 
-            // provide information about the design-time container.
+            // Overrides the CanConvertFrom method of TypeConverter. The ITypeDescriptorContext
+            // interface provides the context for the conversion. Typically, this interface is used
+            // at design time to provide information about the design-time container.
             public override bool CanConvertFrom(ITypeDescriptorContext context,
-               Type sourceType)
+                                                Type sourceType)
             {
-
                 if (sourceType == typeof(string))
                 {
                     return true;
                 }
+
                 return base.CanConvertFrom(context, sourceType);
             }
+
             // Overrides the ConvertFrom method of TypeConverter.
             public override object ConvertFrom(ITypeDescriptorContext context,
-               CultureInfo culture, object value)
+                                               CultureInfo culture, object value)
             {
                 if (value is string)
                 {
                 }
+
                 return base.ConvertFrom(context, culture, value);
             }
+
             // Overrides the ConvertTo method of TypeConverter.
             public override object ConvertTo(ITypeDescriptorContext context,
-               CultureInfo culture, object value, Type destinationType)
+                                             CultureInfo culture, object value, Type destinationType)
             {
                 if (destinationType == typeof(string))
                 {
                 }
+
                 return base.ConvertTo(context, culture, value, destinationType);
             }
         }
-
     }
 }

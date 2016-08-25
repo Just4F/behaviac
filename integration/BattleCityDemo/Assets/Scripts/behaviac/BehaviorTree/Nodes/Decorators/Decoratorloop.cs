@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and limitations under the License.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace behaviac
@@ -21,14 +19,52 @@ namespace behaviac
     {
         public DecoratorLoop()
         {
-		}
-        ~DecoratorLoop()
-        {
         }
+
+        //~DecoratorLoop()
+        //{
+        //}
+
+#if BEHAVIAC_USE_HTN
+        public override bool decompose(BehaviorNode node, PlannerTaskComplex seqTask, int depth, Planner planner)
+        {
+            DecoratorLoop loop = (DecoratorLoop)node;
+            bool bOk = false;
+            int childCount = loop.GetChildrenCount();
+            Debug.Check(childCount == 1);
+            BehaviorNode childNode = loop.GetChild(0);
+            PlannerTask childTask = planner.decomposeNode(childNode, depth);
+
+            if (childTask != null)
+            {
+                seqTask.AddChild(childTask);
+                bOk = true;
+            }
+
+            return bOk;
+        }
+#endif//
 
         protected override void load(int version, string agentType, List<property_t> properties)
         {
             base.load(version, agentType, properties);
+
+            for (int i = 0; i < properties.Count; ++i)
+            {
+                property_t p = properties[i];
+                if (p.name == "DoneWithinFrame")
+                {
+					if (p.value == "true")
+					{
+						this.m_bDoneWithinFrame = true;
+					}
+                }
+            }
+        }
+
+        public int Count(Agent pAgent)
+        {
+            return base.GetCount(pAgent);
         }
 
         public override bool IsValid(Agent pAgent, BehaviorTask pTask)
@@ -41,6 +77,8 @@ namespace behaviac
             return base.IsValid(pAgent, pTask);
         }
 
+        protected bool m_bDoneWithinFrame;
+
         protected override BehaviorTask createTask()
         {
             DecoratorLoopTask pTask = new DecoratorLoopTask();
@@ -49,15 +87,15 @@ namespace behaviac
         }
 
         ///Returns EBTStatus.BT_FAILURE for the specified number of iterations, then returns EBTStatus.BT_SUCCESS after that
-        class DecoratorLoopTask : DecoratorCountTask
+        private class DecoratorLoopTask : DecoratorCountTask
         {
             public DecoratorLoopTask()
             {
             }
 
-            ~DecoratorLoopTask()
-            {
-            }
+            //~DecoratorLoopTask()
+            //{
+            //}
 
             public override void copyto(BehaviorTask target)
             {
@@ -68,6 +106,7 @@ namespace behaviac
             {
                 base.save(node);
             }
+
             public override void load(ISerializableNode node)
             {
                 base.load(node);
@@ -96,6 +135,43 @@ namespace behaviac
 
                 return EBTStatus.BT_SUCCESS;
             }
+
+            protected override EBTStatus update(Agent pAgent, EBTStatus childStatus)
+            {
+                Debug.Check(this.m_node is DecoratorLoop);
+                DecoratorLoop node = (DecoratorLoop)this.m_node;
+
+                if (node.m_bDoneWithinFrame)
+                {
+                    Debug.Check(this.m_n >= 0);
+                    Debug.Check(this.m_root != null);
+
+                    EBTStatus status = EBTStatus.BT_INVALID;
+
+                    for (int i = 0; i < this.m_n; ++i)
+                    {
+                        status = this.m_root.exec(pAgent, childStatus);
+
+                        if (node.m_bDecorateWhenChildEnds)
+                        {
+                            while (status == EBTStatus.BT_RUNNING)
+                            {
+                                status = base.update(pAgent, childStatus);
+                            }
+                        }
+
+                        if (status == EBTStatus.BT_FAILURE)
+                        {
+                            return EBTStatus.BT_FAILURE;
+                        }
+                    }
+
+                    return EBTStatus.BT_SUCCESS;
+                }
+
+                return base.update(pAgent, childStatus);
+            }
+
         }
     }
 }

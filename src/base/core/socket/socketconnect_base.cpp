@@ -25,7 +25,7 @@
 #include "behaviac/base/core/memory/memory.h"
 #include "behaviac/base/core/memory/mempoollinked.h"
 
-#include <cstring>	// strncpy
+#include <cstring>	// string_ncpy
 
 #if BEHAVIAC_COMPILER_MSVC
 #include <windows.h>
@@ -44,13 +44,12 @@ namespace behaviac
 	// Local queue size must be power of two.
 	BEHAVIAC_STATIC_ASSERT((kLocalQueueSize & (kLocalQueueSize - 1)) == 0);
 
-
 #if USING_BEHAVIAC_SEQUENTIAL
 	class PacketCollection
 	{
 	public:
 		PacketCollection()
-			:	m_packets(0),
+			: m_packets(0),
 			m_packetsEnd(0),
 			m_packetsCapacityEnd(0)
 		{
@@ -132,8 +131,8 @@ namespace behaviac
 	class PacketBuffer
 	{
 	public:
-		PacketBuffer()
-			:	m_free(true)
+		PacketBuffer(ConnectorInterface* c)
+			: m_connector(c), m_free(true)
 		{
 		}
 
@@ -149,6 +148,7 @@ namespace behaviac
 				{
 					m_packetQueue.Pop();
 					packet = m_packetQueue.Peek();
+
 				}
 				else
 				{
@@ -183,10 +183,21 @@ namespace behaviac
 			}
 		}
 
-		bool	m_free;
+		ConnectorInterface* m_connector;
+		bool				m_free;
 
+		void Clear()
+		{
+			Packet* packet = m_packetQueue.Peek();
+
+			while (packet)
+			{
+				m_packetQueue.Pop();	// 'Commit' pop if data sent.
+				packet = m_packetQueue.Peek();
+			}
+		}
 	private:
-		enum { MAX_PACKETS_IN_BUFFER	= kLocalQueueSize };
+		enum { MAX_PACKETS_IN_BUFFER = kLocalQueueSize };
 
 		behaviac::SPSCQueue<Packet, MAX_PACKETS_IN_BUFFER>	m_packetQueue;
 	};
@@ -195,35 +206,35 @@ namespace behaviac
 	{
 	public:
 		CustomObjectPool(uint32_t objectCountPerSegment) :
-		  behaviac::LinkedObjectPool<Packet>(objectCountPerSegment, BEHAVIAC_OBJECTPOOL_INFINIT)
-		  {}
+			behaviac::LinkedObjectPool<Packet>(objectCountPerSegment, BEHAVIAC_OBJECTPOOL_INFINIT)
+		{}
 
-		  virtual ~CustomObjectPool()
-		  {}
+		virtual ~CustomObjectPool()
+		{}
 	};
 
-#if BEHAVIAC_COMPILER_MSVC		
-	uint32_t t_packetBufferIndex = TLS_OUT_OF_INDEXES;
-#elif BEHAVIAC_COMPILER_APPLE
-	uint32_t t_packetBufferIndex = (unsigned int)-1;
+#if BEHAVIAC_COMPILER_MSVC
+	int32_t t_packetBufferIndex = TLS_OUT_OF_INDEXES;
+#elif BEHAVIAC_COMPILER_APPLE || BEHAVIAC_COMPILER_ANDROID
+	__thread int32_t t_packetBufferIndex = (int32_t)-1;
 #else
-	__thread uint32_t t_packetBufferIndex = (unsigned int)-1;
-#endif			
+	__thread int32_t t_packetBufferIndex = (int32_t)-1;
+#endif
 
-	ConnectorInterface::ConnectorInterface() :	
+	ConnectorInterface::ConnectorInterface() :
 		m_port(0),
 		m_writeSocket(0),
 		m_packetBuffers(0),
-		m_packetCollection(0), 
-		m_packetPool(0), 
+		m_packetCollection(0),
+		m_packetPool(0),
 		m_maxTracedThreads(0),
 		m_isInited(0),
 		m_isConnected(0),
 		m_isDisconnected(0),
 		m_isConnectedFinished(0),
 		m_terminating(0),
-		m_packetsCount(0), 
-        s_tracerThread(0),
+		m_packetsCount(0),
+		s_tracerThread(0),
 		m_bHandleMessage(true)
 	{
 	}
@@ -245,7 +256,7 @@ namespace behaviac
 		//t_packetBufferIndex = 0;
 		//printf("Init t_packetBufferIndex = %d\n", t_packetBufferIndex);
 #endif//BEHAVIAC_COMPILER_MSVC
-		m_port = (unsigned short) - 1;
+		m_port = (unsigned short)-1;
 
 		m_packetPool = BEHAVIAC_NEW CustomObjectPool(4096);
 		m_packetCollection = BEHAVIAC_NEW PacketCollection;
@@ -278,14 +289,20 @@ namespace behaviac
 
 			if (bBlocking)
 			{
+				BEHAVIAC_LOG(BEHAVIAC_LOG_WARNING, "behaviac: SetupConnection is blocked, please Choose 'Connect' in the Designer to continue\n");
+				printf("\n[behaviac]wait for the designer to connnect at port %d...\n", (int)m_port);
+
 				while (!this->IsConnected() || !this->IsConnectedFinished())
 				{
 					// Wait for connection
 					behaviac::Thread::Sleep(100);
 				}
 
+				printf("[behaviac]connected.\n");
+				BEHAVIAC_LOG(BEHAVIAC_LOG_INFO, "[behaviac]connected.\n");
+
 				behaviac::Thread::Sleep(1);
-			
+
 				BEHAVIAC_ASSERT(this->IsConnected() && this->IsConnectedFinished());
 			}
 
@@ -352,12 +369,14 @@ namespace behaviac
 		BEHAVIAC_DELETE(m_packetPool);
 		m_packetPool = 0;
 #if BEHAVIAC_COMPILER_MSVC
+
 		if (t_packetBufferIndex != TLS_OUT_OF_INDEXES)
 		{
 			TlsFree(t_packetBufferIndex);
 			t_packetBufferIndex = TLS_OUT_OF_INDEXES;
 		}
-#else		
+
+#else
 		t_packetBufferIndex = 0;
 #endif
 		behaviac::Socket::ShutdownSockets();
@@ -370,7 +389,6 @@ namespace behaviac
 		tracer->ThreadFunc();
 	}
 
-
 	void ConnectorInterface::CreateAndStartThread()
 	{
 		thread::ThreadHandle threadHandle = behaviac::thread::CreateAndStartThread((behaviac::thread::ThreadFunction*)&MemTracer_ThreadFunc, this, 16 * 1024);
@@ -380,7 +398,7 @@ namespace behaviac
 
 	bool ConnectorInterface::IsConnected() const
 	{
-		return m_isConnected != 0;
+		return m_isConnected != 0 && this->m_writeSocket;
 	}
 
 	bool ConnectorInterface::IsDisconnected() const
@@ -403,26 +421,34 @@ namespace behaviac
 		this->m_port = port;
 	}
 
+	int ConnectorInterface::GetBufferIndex(bool bReserve)
+	{
+#if BEHAVIAC_COMPILER_MSVC
+		BEHAVIAC_ASSERT(t_packetBufferIndex != TLS_OUT_OF_INDEXES);
+		int32_t bufferIndex = (int32_t)(uint64_t)TlsGetValue(t_packetBufferIndex);
+#else
+		//BEHAVIAC_ASSERT(t_packetBufferIndex != (unsigned int) - 1);
+		int32_t bufferIndex = t_packetBufferIndex;
+#endif
+		//BEHAVIAC_LOGINFO("GetBufferIndex %d %d\n", bufferIndex, bReserve ? 1 : 0);
+
+		//WHEN bReserve is false, it is unsafe to allocate memory as other threads might be allocating
+		//you can avoid the following assert to malloc a block of memory in your thread at the very beginning
+
+		if (bufferIndex <= 0 && bReserve)
+		{
+			bufferIndex = ReserveThreadPacketBuffer();
+		}
+
+		return (int)bufferIndex;
+	}
+
+
 	void ConnectorInterface::AddPacket(const Packet& packet, bool bReserve)
 	{
-		if (this->IsConnected())
+		if (this->IsConnected() && this->m_writeSocket != 0)
 		{
-#if BEHAVIAC_COMPILER_MSVC			
-			BEHAVIAC_ASSERT(t_packetBufferIndex != TLS_OUT_OF_INDEXES);
-			int bufferIndex = (int)TlsGetValue(t_packetBufferIndex);
-#else
-			BEHAVIAC_ASSERT(t_packetBufferIndex != (unsigned int)-1);
-			int bufferIndex = (int)t_packetBufferIndex;
-#endif			
-			//WHEN bReserve is false, it is unsafe to allocate memory as other threads might be allocating
-			//you can avoid the following assert to malloc a block of memory in your thread at the very beginning
-			BEHAVIAC_ASSERT(bufferIndex > 0 || bReserve);
-
-			//bufferIndex initially is 0
-			if (bufferIndex <= 0 && bReserve)
-			{
-				bufferIndex = ReserveThreadPacketBuffer();
-			}
+			int bufferIndex = this->GetBufferIndex(bReserve);
 
 			if (bufferIndex > 0)
 			{
@@ -430,9 +456,12 @@ namespace behaviac
 
 				this->m_packetsCount++;
 			}
+			else
+			{
+				Log("AddPacket error: bufferIndex < 0\n");
+			}
 		}
 	}
-
 
 	void ConnectorInterface::RecordText(const char* text)
 	{
@@ -446,12 +475,11 @@ namespace behaviac
 				pP->Init(CommandId::CMDID_TEXT, s_seq.Next());
 
 				Text* pT = (Text*)pP->data;
-				strncpy(pT->buffer, text, kMaxTextLength);
+				string_ncpy(pT->buffer, text, kMaxTextLength);
 				pT->buffer[kMaxTextLength] = '\0';
 			}
 		}
 	}
-
 
 	void ConnectorInterface::SendAllPackets()
 	{
@@ -477,7 +505,7 @@ namespace behaviac
 		// (right now packet is lost).
 		m_packetCollection->Sort();
 
-		for (Packet* p = m_packetCollection->Begin(); p != m_packetCollection->End(); ++p)
+		for (Packet* p = m_packetCollection->Begin(); p != m_packetCollection->End() && this->m_writeSocket; ++p)
 		{
 			const size_t bytesToSend = p->PrepareToSend();
 			size_t bytesWritten(0);
@@ -489,16 +517,15 @@ namespace behaviac
 		this->m_packetsCount = 0;
 	}
 
-
 	int ConnectorInterface::ReserveThreadPacketBuffer()
 	{
-#if BEHAVIAC_COMPILER_MSVC		
-		int bufferIndex = (int)TlsGetValue(t_packetBufferIndex);
+#if BEHAVIAC_COMPILER_MSVC
+		int32_t bufferIndex = (int32_t)(uint64_t)TlsGetValue(t_packetBufferIndex);
 #else
-		int bufferIndex = t_packetBufferIndex;
-#endif		
+		int32_t bufferIndex = t_packetBufferIndex;
+#endif
 		//THREAD_ID_TYPE id = behaviac::GetTID();
-		//BEHAVIAC_LOGINFO("ReserveThreadPacketBuffer:%d thread %d\n", bufferIndex, id);
+		//BEHAVIAC_LOGINFO("ReserveThreadPacketBuffer 1:%d thread %p\n", bufferIndex, id);
 
 		//bufferIndex initially is 0
 		if (bufferIndex <= 0)
@@ -517,7 +544,7 @@ namespace behaviac
 				if (!m_packetBuffers[i])
 				{
 					ScopedInt_t scopedInt(&gs_threadFlag);
-					m_packetBuffers[i] = BEHAVIAC_NEW PacketBuffer();
+					m_packetBuffers[i] = BEHAVIAC_NEW PacketBuffer(this);
 				}
 
 				if (m_packetBuffers[i])
@@ -531,10 +558,12 @@ namespace behaviac
 				}
 			}
 
+			//BEHAVIAC_LOGINFO("ReserveThreadPacketBuffer 3:%d thread %p\n", retIndex, id);
+
 			if (retIndex > 0)
 			{
-#if BEHAVIAC_COMPILER_MSVC				
-				TlsSetValue(t_packetBufferIndex, (PVOID)retIndex);
+#if BEHAVIAC_COMPILER_MSVC
+				TlsSetValue(t_packetBufferIndex, (PVOID)(uint64_t)retIndex);
 #else
 				t_packetBufferIndex = retIndex;
 #endif
@@ -547,7 +576,7 @@ namespace behaviac
 
 			bufferIndex = retIndex;
 
-			//BEHAVIAC_LOGINFO("ReserveThreadPacketBuffer:%d thread %d\n", bufferIndex, id);
+			//BEHAVIAC_LOGINFO("ReserveThreadPacketBuffer 2:%d thread %p\n", bufferIndex, id);
 		}
 
 		return bufferIndex;
@@ -559,6 +588,7 @@ namespace behaviac
 		char buffer[kBufferLen];
 
 		bool found = false;
+
 		while (size_t reads = behaviac::Socket::Read(m_writeSocket, buffer, kBufferLen))
 		{
 			buffer[reads] = '\0';
@@ -575,6 +605,11 @@ namespace behaviac
 			{
 				//printf("ReceivePackets found\n");
 				found = true;
+			}
+
+			if (this->m_writeSocket == 0)
+			{
+				break;
 			}
 		}
 
@@ -607,12 +642,12 @@ namespace behaviac
 		{
 			ScopedInt_t scopedInt(&gs_threadFlag);
 			Log("behaviac: Socket Thread Starting\n");
-#if BEHAVIAC_COMPILER_MSVC			
+#if BEHAVIAC_COMPILER_MSVC
 			BEHAVIAC_ASSERT(t_packetBufferIndex != TLS_OUT_OF_INDEXES);
 #else
 			//printf("ThreadFunc t_packetBufferIndex = %d\n", t_packetBufferIndex);
 			//BEHAVIAC_ASSERT(t_packetBufferIndex != (unsigned int)-1);
-#endif//			
+#endif//
 		}
 		namespace Socket = behaviac::Socket;
 		const bool blockingSocket = true;
@@ -648,6 +683,7 @@ namespace behaviac
 		while (!m_terminating)
 		{
 #if BEHAVIAC_COMPILER_MSVC
+
 			//wait for connecting
 			while (!m_terminating)
 			{
@@ -659,7 +695,9 @@ namespace behaviac
 
 				behaviac::Thread::Sleep(100);
 			}
+
 #endif
+
 			if (!m_terminating)
 			{
 				BEHAVIAC_ASSERT(gs_threadFlag.value() == 0);
@@ -677,29 +715,28 @@ namespace behaviac
 
 					Log("behaviac: connection accepted\n");
 				}
-				
+
 				BEHAVIAC_ASSERT(gs_threadFlag.value() == 0);
 
 				{
 					ScopedInt_t scopedInt(&gs_threadFlag);
-					
+
 					AtomicInc(m_isConnected);
 					behaviac::Thread::Sleep(1);
-					
+
 					OnConnection();
-					
+
 					AtomicInc(m_isConnectedFinished);
 					behaviac::Thread::Sleep(1);
 
 					//this->OnConnectionFinished();
-	
+
 					Log("behaviac: after Connected.\n");
 				}
 
-
 				BEHAVIAC_ASSERT(gs_threadFlag.value() == 0);
 
-				while (!m_terminating && m_writeSocket)
+				while (!m_terminating && this->m_writeSocket)
 				{
 					behaviac::Thread::Sleep(1);
 					SendAllPackets();
@@ -708,9 +745,15 @@ namespace behaviac
 				}
 
 				BEHAVIAC_ASSERT(gs_threadFlag.value() == 0);
+
 				// One last time, to send any outstanding packets out there.
-				SendAllPackets();
-				Socket::Close(m_writeSocket);
+				if (this->m_writeSocket)
+				{
+					SendAllPackets();
+
+					Socket::Close(m_writeSocket);
+				}
+
 				this->Clear();
 
 				Log("behaviac: disconnected. \n");
@@ -725,7 +768,6 @@ namespace behaviac
 
 		Log("behaviac: ThreadFunc exited. \n");
 	}
-
 
 	size_t ConnectorInterface::GetMemoryOverhead() const
 	{
@@ -774,9 +816,35 @@ namespace behaviac
 		this->m_isConnectedFinished = 0;
 		this->m_terminating = 0;
 
+		if (this->m_packetBuffers)
+		{
+			int bufferIndex = this->GetBufferIndex(false);
+
+			if (bufferIndex > 0)
+			{
+				this->m_packetBuffers[bufferIndex]->Clear();
+			}
+		}
+
+		if (this->m_packetPool)
+		{
+			behaviac::LinkedObjectPool<Packet>::Iterator it = this->m_packetPool->Begin();
+
+			while (!it.Empty())
+			{
+				Packet* p = (*it);
+				++it;
+				this->m_packetPool->Free(p);
+			}
+		}
+
+		if (this->m_packetCollection)
+		{
+			this->m_packetCollection->Reset();
+		}
+
 		this->m_packetsCount = 0;
 	}
-
 
 	void ConnectorInterface::SendExistingPackets()
 	{
@@ -812,16 +880,17 @@ namespace behaviac
 		//this->m_packetPool->Destroy(true);
 	}
 
-
 	void ConnectorInterface::SendText(const char* text, uint8_t commandId)
 	{
 		if (this->IsConnected())
 		{
 			Packet packet(commandId, s_seq.Next());
 
-			Text* pT = (Text*)packet.data;
-			strncpy(pT->buffer, text, kMaxTextLength);
-			pT->buffer[kMaxTextLength] = '\0';
+			char* pT = (char*)packet.data;
+			BEHAVIAC_ASSERT(kMaxTextLength < kMaxPacketDataSize);
+
+			string_ncpy(pT, text, kMaxTextLength);
+			pT[kMaxTextLength] = '\0';
 			this->AddPacket(packet, true);
 			gs_packetsStats.texts++;
 		}
@@ -852,9 +921,13 @@ namespace behaviac
 		{
 			//BEHAVIAC_LOGINFO("packet buffer is full... buffer size: %d\n", MAX_PACKETS_IN_BUFFER);
 			behaviac::Thread::Sleep(1);
+
+			if (!this->m_connector->GetWriteSocket())
+			{
+				break;
+			}
 		}
 
 		m_packetQueue.Push(packet);
 	}
-
 }
